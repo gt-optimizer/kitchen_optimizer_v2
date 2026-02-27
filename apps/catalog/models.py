@@ -78,12 +78,21 @@ class Ingredient(models.Model):
     net_weight_kg = models.DecimalField(
         max_digits=8, decimal_places=4, default=1,
         verbose_name="Poids net (kg/unité)",
-        help_text="Poids net en kg d'une unité d'achat"
+        help_text="Poids net total de l'unité d'achat complète (kg). "
+                  "Ex: colis 6×75cl d'huile → 3.6 kg. Sac farine 25kg → 25."
     )
     net_volume_l = models.DecimalField(
         max_digits=8, decimal_places=4, default=1,
         verbose_name="Volume net (l/unité)",
-        help_text="Volume net en litre d'une unité d'achat"
+        help_text="Volume net total de l'unité d'achat complète (litres). "
+                  "Ex: colis 6×75cl → 4.5 l. Laisser à 1 si non applicable."
+    )
+    density_kg_per_l = models.DecimalField(
+        max_digits=5, decimal_places=3,
+        null=True, blank=True,
+        verbose_name="Densité (kg/l)",
+        help_text="Masse d'un litre du produit. Ex: huile=0.8, eau=1.0, miel=1.4. "
+                  "Laisser vide si non applicable (produits solides achetés au kg)."
     )
     pieces_per_package = models.DecimalField(
         max_digits=6, decimal_places=0, default=1,
@@ -105,7 +114,7 @@ class Ingredient(models.Model):
     reference_price = models.DecimalField(
         max_digits=9, decimal_places=4, default=0,
         verbose_name="Prix de référence (HT)",
-        help_text="Mis à jour automatiquement à chaque réception"
+        help_text="Saisir les prix dans l'onglet Prix de la fiche ingrédient."
     )
 
     ciqual_ref = models.ForeignKey(
@@ -165,11 +174,150 @@ class Ingredient(models.Model):
         return self.name
 
     @property
-    def cost_per_kg(self):
-        """Coût réel par kg après rendement."""
-        if self.net_weight_kg and self.yield_rate and self.yield_rate > 0:
-            return round(self.reference_price / (self.net_weight_kg * self.yield_rate), 4)
-        return Decimal("0")
+    def cost_per_use_unit(self) -> Decimal:
+        """
+        Coût réel par unité d'utilisation, après rendement.
+
+        Conventions :
+            - net_weight_kg  : poids net TOTAL de l'unité d'achat (kg)
+            - net_volume_l   : volume net TOTAL de l'unité d'achat (litres)
+            - density_kg_per_l : densité du produit (kg/l) — conversion kg ↔ litre
+            - yield_rate     : rendement (0-1), ex: 0.85 pour 85% utilisable
+            - purchase_unit  : unité dans laquelle on achète
+            - use_unit       : unité dans laquelle on utilise en recette
+
+        Matrice purchase_unit → use_unit :
+            kg/litre → kg/litre  : prix / (poids_ou_volume × rendement)
+            kg       → litre     : prix / (poids × rendement / densité)
+            litre    → kg        : prix / (volume × rendement × densité)
+            pièce    → pièce     : prix / (paquets × pièces)
+            pièce    → kg        : prix / (net_weight_kg × rendement)
+            pièce    → litre     : prix / (net_volume_l × rendement)
+            paquet   → pièce     : prix / pièces_par_paquet
+            paquet   → kg        : prix / (net_weight_kg × rendement)
+            paquet   → litre     : prix / (net_volume_l × rendement)
+            colis    → pièce     : prix / (paquets_par_colis × pièces_par_paquet)
+            colis    → kg        : prix / (net_weight_kg × rendement)
+            colis    → litre     : prix / (net_volume_l × rendement)
+        """
+        try:
+            price = float(self.current_purchase_price)
+            if price == 0:
+                return Decimal("0")
+
+            w = float(self.net_weight_kg)  # poids total unité achat
+            v = float(self.net_volume_l)  # volume total unité achat
+            y = float(self.yield_rate)  # rendement 0-1
+            ppp = float(self.pieces_per_package)  # pièces par paquet
+            ppu = float(self.packages_per_purchase_unit)  # paquets par unité achat
+            d = float(self.density_kg_per_l) if self.density_kg_per_l else None
+
+            pu = self.purchase_unit  # unité d'achat
+            uu = self.use_unit  # unité d'utilisation
+
+            # ── Achat au kg ───────────────────────────────────────────────────────
+            if pu == "kg":
+                if uu == "kg":
+                    # ex: farine 25kg → utilisée au kg
+                    # coût/kg = prix / (poids × rendement)
+                    return Decimal(str(round(price / (w * y), 4)))
+                elif uu == "litre":
+                    # ex: sucre au kg utilisé au litre (peu courant)
+                    # coût/l = prix / (poids × rendement / densité)
+                    if not d:
+                        raise ValueError(f"{self.name} : densité requise pour conversion kg→litre")
+                    return Decimal(str(round(price / (w * y / d), 4)))
+                elif uu == "g":
+                    return Decimal(str(round(price / (w * y * 1000), 4)))
+
+            # ── Achat au litre ────────────────────────────────────────────────────
+            elif pu == "litre":
+                if uu == "litre":
+                    # ex: lait en bidon 10l → utilisé au litre
+                    return Decimal(str(round(price / (v * y), 4)))
+                elif uu == "kg":
+                    # ex: huile achetée au litre utilisée au kg
+                    if not d:
+                        raise ValueError(f"{self.name} : densité requise pour conversion litre→kg")
+                    return Decimal(str(round(price / (v * y * d), 4)))
+                elif uu == "ml":
+                    return Decimal(str(round(price / (v * y * 1000), 4)))
+
+            # ── Achat à la pièce ──────────────────────────────────────────────────
+            elif pu == "pièce":
+                total_pieces = ppu * ppp  # paquets × pièces/paquet
+                if uu == "pièce":
+                    # ex: œufs achetés à la pièce utilisés à la pièce
+                    return Decimal(str(round(price / (total_pieces * y), 4)))
+                elif uu == "kg":
+                    # ex: bouteille d'huile utilisée au kg
+                    return Decimal(str(round(price / (w * y), 4)))
+                elif uu == "litre":
+                    # ex: bouteille d'huile 75cl utilisée au litre
+                    return Decimal(str(round(price / (v * y), 4)))
+
+            # ── Achat au paquet ───────────────────────────────────────────────────
+            elif pu == "paquet":
+                if uu == "pièce":
+                    # ex: paquet de 6 yaourts utilisés à la pièce
+                    return Decimal(str(round(price / (ppp * y), 4)))
+                elif uu == "kg":
+                    return Decimal(str(round(price / (w * y), 4)))
+                elif uu == "litre":
+                    return Decimal(str(round(price / (v * y), 4)))
+
+            # ── Achat au colis ────────────────────────────────────────────────────
+            elif pu == "colis":
+                if uu == "pièce":
+                    # ex: colis 6 paquets × 12 pièces = 72 pièces
+                    return Decimal(str(round(price / (ppu * ppp * y), 4)))
+                elif uu == "kg":
+                    return Decimal(str(round(price / (w * y), 4)))
+                elif uu == "litre":
+                    return Decimal(str(round(price / (v * y), 4)))
+
+            # Cas non géré
+            raise ValueError(f"{self.name} : combinaison {pu}→{uu} non gérée")
+
+        except (TypeError, ZeroDivisionError, ValueError) as e:
+            import logging
+            logging.getLogger(__name__).warning(f"cost_per_use_unit error: {e}")
+            return Decimal("0")
+
+    @property
+    def cost_per_kg(self) -> Decimal:
+        """
+        Alias rétrocompatible — utilisé dans RecipeLine.line_cost.
+        Redirige vers cost_per_use_unit.
+        """
+        return self.cost_per_use_unit
+
+    @property
+    def current_purchase_price(self) -> Decimal:
+        """
+        Prix d'achat courant depuis PriceRecord.
+        Fallback sur reference_price pendant la transition.
+        """
+        from apps.pricing.models import PriceRecord
+        from django.utils import timezone
+        today = timezone.localdate()
+        record = (
+            PriceRecord.objects
+            .filter(
+                ingredient=self,
+                channel="purchase",
+                valid_from__lte=today,
+            )
+            .filter(
+                models.Q(valid_until__isnull=True) |
+                models.Q(valid_until__gte=today)
+            )
+            .order_by("-valid_from")
+            .first()
+        )
+        if record:
+            return record.price_ht
+        return self.reference_price  # fallback temporaire
 
     @property
     def allergen_list(self):
@@ -264,6 +412,7 @@ class Recipe(models.Model):
         null=True, blank=True, verbose_name="Taux de TVA"
     )
 
+
     # ── Infos ─────────────────────────────────────────────────────────────────
     notes = models.TextField(blank=True, verbose_name="Notes / conseils")
     photo = models.ImageField(
@@ -345,23 +494,67 @@ class Recipe(models.Model):
         return round(self.cost_total / qty, 4)
 
     @property
+    def current_selling_price(self) -> dict | None:
+        """
+        Prix de vente courant depuis PriceRecord.
+        Retourne {'ht': Decimal, 'ttc': Decimal, 'vat': VatRate, 'channel': str}
+        ou None si aucun prix de vente défini.
+        Priorité retail > wholesale si les deux existent à la même date.
+        """
+        from apps.pricing.models import PriceRecord
+        from django.utils import timezone
+        today = timezone.localdate()
+        record = (
+            PriceRecord.objects
+            .filter(
+                recipe=self,
+                channel__in=("retail", "wholesale"),
+                valid_from__lte=today,
+            )
+            .filter(
+                models.Q(valid_until__isnull=True) |
+                models.Q(valid_until__gte=today)
+            )
+            .select_related("vat_rate")
+            .order_by(
+                models.Case(
+                    models.When(channel="retail", then=0),
+                    models.When(channel="wholesale", then=1),
+                    default=2,
+                ),
+                "-valid_from"
+            )
+            .first()
+        )
+        if not record:
+            return None
+        return {
+            "ht": record.price_ht,
+            "ttc": record.price_ttc,
+            "vat": record.vat_rate,
+            "channel": record.get_channel_display(),
+        }
+
+    @property
     def margin(self) -> float | None:
         """
-        Marge brute en € si prix de vente défini.
-        margin = selling_price_ht - cost_per_unit
+        Marge brute en € = prix de vente HT courant - coût de revient par unité.
+        None si aucun prix de vente défini.
         """
-        if self.selling_price_ht and self.cost_per_unit:
-            return round(float(self.selling_price_ht) - self.cost_per_unit, 4)
+        sp = self.current_selling_price
+        if sp and sp["ht"] and self.cost_per_unit:
+            return round(float(sp["ht"]) - self.cost_per_unit, 4)
         return None
 
     @property
     def margin_rate(self) -> float | None:
         """
-        Taux de marge en % si prix de vente défini.
-        margin_rate = (margin / selling_price_ht) × 100
+        Taux de marge en % = (marge / prix HT) × 100.
+        None si aucun prix de vente défini.
         """
-        if self.margin and self.selling_price_ht:
-            return round(self.margin / float(self.selling_price_ht) * 100, 1)
+        sp = self.current_selling_price
+        if self.margin is not None and sp and sp["ht"]:
+            return round(self.margin / float(sp["ht"]) * 100, 1)
         return None
 
 
@@ -465,35 +658,15 @@ class RecipeLine(models.Model):
     def line_cost(self) -> float:
         """
         Coût de cette ligne en €.
-
-        Pour un ingrédient :
-          coût = quantité_en_kg × (prix_ref / poids_net_kg) / rendement
-          On convertit d'abord la quantité dans l'unité de référence (kg ou litre).
-
-        Pour une sous-recette :
-          coût = quantité × sous_recette.cost_per_unit
+        Utilise cost_per_use_unit de l'ingrédient — gère toutes les
+        combinaisons purchase_unit → use_unit avec densité et rendement.
         """
         try:
             qty = float(self.quantity)
-
             if self.ingredient:
-                ing = self.ingredient
-                price_per_kg = float(ing.reference_price) / float(ing.net_weight_kg)
-                effective_price = price_per_kg / float(ing.yield_rate)
-
-                # Conversion unité → kg
-                unit_factor = {
-                    "kg": 1.0,
-                    "g": 0.001,
-                    "litre": 1.0,
-                    "ml": 0.001,
-                }.get(self.unit, 1.0)
-
-                return qty * unit_factor * effective_price
-
+                return round(qty * float(self.ingredient.cost_per_use_unit), 4)
             elif self.sub_recipe:
-                return qty * self.sub_recipe.cost_per_unit
-
+                return round(qty * self.sub_recipe.cost_per_unit, 4)
         except (TypeError, ZeroDivisionError):
             return 0.0
         return 0.0
