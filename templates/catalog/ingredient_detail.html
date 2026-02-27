@@ -4,6 +4,8 @@
 {% block nav_catalog %}active{% endblock %}
 
 {% block content %}
+
+{# ── En-tête ─────────────────────────────────────────────────────────────── #}
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost btn-icon">
     <i class="fa-solid fa-arrow-left"></i>
@@ -19,67 +21,246 @@
   </div>
 </div>
 
-<div class="row g-4">
-  <!-- Infos principales -->
-  <div class="col-md-8">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-info-circle"></i> Informations générales
-        </h5>
-        <div class="d-flex gap-2">
-          {% if ingredient.is_organic %}
-          <span class="badge badge-success"><i class="fa-solid fa-seedling"></i> Bio</span>
-          {% endif %}
-          {% if ingredient.is_vegan %}
-          <span class="badge badge-success"><i class="fa-solid fa-leaf"></i> Végan</span>
-          {% endif %}
-          {% if ingredient.is_veggie %}
-          <span class="badge badge-primary"><i class="fa-solid fa-carrot"></i> Végétarien</span>
-          {% endif %}
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="form-label">Catégorie</div>
-            <div>{{ ingredient.category.name|default:"—" }}</div>
-          </div>
-          <div class="col-md-3">
-            <div class="form-label">Unité d'achat</div>
-            <div>{{ ingredient.get_purchase_unit_display }}</div>
-          </div>
-          <div class="col-md-3">
-            <div class="form-label">Unité d'utilisation</div>
-            <div>{{ ingredient.get_use_unit_display }}</div>
-          </div>
-          <div class="col-md-3">
-            <div class="form-label">Prix de référence HT</div>
-            <div class="fw-bold text-primary">
-              {% if ingredient.reference_price %}
-                {{ ingredient.reference_price }} €
-              {% else %}—{% endif %}
+{# ── Onglets ──────────────────────────────────────────────────────────────── #}
+<ul class="nav nav-tabs mb-4" id="ingredientTabs">
+  <li class="nav-item">
+    <a class="nav-link active" data-bs-toggle="tab" href="#tab-infos">
+      <i class="fa-solid fa-info-circle me-1"></i> Infos
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-prix">
+      <i class="fa-solid fa-euro-sign me-1"></i> Prix
+      {% if ingredient.current_purchase_price %}
+        <span class="badge badge-primary ms-1">{{ ingredient.current_purchase_price }} €</span>
+      {% endif %}
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-nutri">
+      <i class="fa-solid fa-apple-whole me-1"></i> Nutrition
+    </a>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  {# ══ Onglet INFOS ════════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade show active" id="tab-infos">
+    <div class="row g-4">
+
+      {# Infos principales #}
+      <div class="col-md-8">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fa-solid fa-info-circle"></i> Informations générales
+            </h5>
+            <div class="d-flex gap-2">
+              {% if ingredient.is_organic %}
+              <span class="badge badge-success"><i class="fa-solid fa-seedling"></i> Bio</span>
+              {% endif %}
+              {% if ingredient.is_vegan %}
+              <span class="badge badge-success"><i class="fa-solid fa-leaf"></i> Végan</span>
+              {% endif %}
+              {% if ingredient.is_veggie %}
+              <span class="badge badge-primary"><i class="fa-solid fa-carrot"></i> Végétarien</span>
+              {% endif %}
             </div>
           </div>
-          <div class="col-md-3">
-            <div class="form-label">Rendement</div>
-            <div>{{ ingredient.yield_percent }} %</div>
-          </div>
-          <div class="col-md-3">
-            <div class="form-label">Poids net / unité</div>
-            <div>{{ ingredient.net_weight_kg }} kg</div>
-          </div>
-          <div class="col-md-3">
-            <div class="form-label">Volume net / unité</div>
-            <div>{{ ingredient.net_volume_l }} l</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <div class="form-label">Catégorie</div>
+                <div>{{ ingredient.category.name|default:"—" }}</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-label">Unité d'achat</div>
+                <div>{{ ingredient.get_purchase_unit_display }}</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-label">Unité d'utilisation</div>
+                <div>{{ ingredient.get_use_unit_display }}</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-label">Rendement</div>
+                <div>{{ ingredient.yield_percent }} %</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-label">Poids net / unité achat</div>
+                <div>{{ ingredient.net_weight_kg }} kg</div>
+              </div>
+              <div class="col-md-3">
+                <div class="form-label">Volume net / unité achat</div>
+                <div>{{ ingredient.net_volume_l }} l</div>
+              </div>
+              {% if ingredient.density_kg_per_l %}
+              <div class="col-md-3">
+                <div class="form-label">Densité</div>
+                <div>{{ ingredient.density_kg_per_l }} kg/l</div>
+              </div>
+              {% endif %}
+              <div class="col-md-3">
+                <div class="form-label">Coût / unité utilisation</div>
+                <div class="fw-bold text-primary">
+                  {% if ingredient.cost_per_use_unit %}
+                    {{ ingredient.cost_per_use_unit }} € / {{ ingredient.get_use_unit_display }}
+                  {% else %}—{% endif %}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Valeurs nutritionnelles -->
+      {# Colonne droite #}
+      <div class="col-md-4">
+
+        {# Allergènes #}
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fa-solid fa-triangle-exclamation"></i> Allergènes
+            </h5>
+          </div>
+          <div class="card-body">
+            {% if ingredient.allergens.exists %}
+              <div class="d-flex flex-wrap gap-2">
+                {% for a in ingredient.allergens.all %}
+                <span class="badge badge-warning">{{ a.name }}</span>
+                {% endfor %}
+              </div>
+            {% else %}
+              <span class="text-muted">Aucun allergène déclaré</span>
+            {% endif %}
+          </div>
+        </div>
+
+        {# Températures #}
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fa-solid fa-temperature-half"></i> Températures
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-12">
+                <div class="form-label">Cuisson cible</div>
+                <div>{% if ingredient.target_cooking_temp %}{{ ingredient.target_cooking_temp }}°C{% else %}—{% endif %}</div>
+              </div>
+              <div class="col-6">
+                <div class="form-label">Conservation min</div>
+                <div>{% if ingredient.target_keeping_temp_min %}{{ ingredient.target_keeping_temp_min }}°C{% else %}—{% endif %}</div>
+              </div>
+              <div class="col-6">
+                <div class="form-label">Conservation max</div>
+                <div>{% if ingredient.target_keeping_temp_max %}{{ ingredient.target_keeping_temp_max }}°C{% else %}—{% endif %}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# CIQUAL #}
+        {% if ingredient.ciqual_ref %}
+        <div class="card mb-4">
+          <div class="card-body">
+            <div class="form-label">Référence CIQUAL</div>
+            <div class="text-muted" style="font-size:var(--font-size-sm)">
+              {{ ingredient.ciqual_ref.name_fr }}
+              <span class="badge badge-muted ms-1">{{ ingredient.ciqual_ref.ciqual_code }}</span>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {# Photo étiquette #}
+        {% if ingredient.label_photo %}
+        <div class="card">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fa-solid fa-camera"></i> Photo étiquette
+            </h5>
+            <span class="badge badge-success">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> OCR actif
+            </span>
+          </div>
+          <div class="card-body p-2">
+            <img src="{{ ingredient.label_photo.url }}"
+                 alt="Étiquette {{ ingredient.name }}"
+                 class="img-fluid rounded"
+                 style="cursor:zoom-in"
+                 onclick="this.style.transform = this.style.transform ? '' : 'scale(2)'; this.style.transition='transform 0.3s'">
+            <div class="mt-3 px-2 pb-2">
+              <a href="{% url 'catalog:ingredient_edit' ingredient.pk %}"
+                 class="btn btn-light btn-sm w-100">
+                <i class="fa-solid fa-arrow-rotate-right"></i> Relire l'étiquette
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+
+  {# ══ Onglet PRIX ═════════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade" id="tab-prix">
+    <div class="row g-4">
+      <div class="col-md-6">
+
+        {# Prix d'achat courant #}
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title">
+              <i class="fa-solid fa-cart-shopping"></i> Prix d'achat courant
+            </h5>
+            <button class="btn btn-light btn-sm"
+                    hx-get="{% url 'pricing:ingredient_price_drawer' ingredient.pk %}"
+                    hx-target="#price-drawer"
+                    hx-swap="innerHTML"
+                    onclick="document.getElementById('price-drawer').classList.add('open')">
+              <i class="fa-solid fa-clock-rotate-left"></i> Historique
+            </button>
+          </div>
+          <div class="card-body">
+            {% if ingredient.current_purchase_price %}
+              <div class="kpi-value">{{ ingredient.current_purchase_price }} €</div>
+              <div class="text-muted" style="font-size:var(--font-size-sm)">
+                Prix HT / {{ ingredient.get_purchase_unit_display }}
+              </div>
+              <hr class="divider">
+              <div class="form-label">Coût réel / {{ ingredient.get_use_unit_display }} (après rendement)</div>
+              <div class="fw-bold text-primary" style="font-size:var(--font-size-lg)">
+                {{ ingredient.cost_per_use_unit }} €
+              </div>
+            {% else %}
+              <div class="text-muted">
+                <i class="fa-solid fa-circle-info me-1"></i>
+                Aucun prix d'achat saisi.
+              </div>
+            {% endif %}
+            <div class="mt-3">
+              <button class="btn btn-primary btn-sm"
+                      hx-get="{% url 'pricing:ingredient_price_add' ingredient.pk %}"
+                      hx-target="#price-drawer"
+                      hx-swap="innerHTML"
+                      onclick="document.getElementById('price-drawer').classList.add('open')">
+                <i class="fa-solid fa-plus"></i> Ajouter un prix
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  {# ══ Onglet NUTRITION ════════════════════════════════════════════════════ #}
+  <div class="tab-pane fade" id="tab-nutri">
     {% if ingredient.energy_kcal %}
-    <div class="card mb-4">
+    <div class="card">
       <div class="card-header">
         <h5 class="card-title">
           <i class="fa-solid fa-apple-whole"></i> Valeurs nutritionnelles
@@ -91,104 +272,39 @@
           {% for label, value, unit in nutri_values %}
           <div class="col-4 col-md-2">
             <div class="form-label">{{ label }}</div>
-            <div class="fw-bold">{{ value|default:"—" }} <small class="text-muted">{{ unit }}</small></div>
+            <div class="fw-bold">
+              {{ value|default:"—" }} <small class="text-muted">{{ unit }}</small>
+            </div>
           </div>
           {% endfor %}
         </div>
       </div>
     </div>
+    {% else %}
+      <div class="alert alert-info">
+        <i class="fa-solid fa-circle-info"></i>
+        Aucune valeur nutritionnelle disponible pour cet ingrédient.
+      </div>
     {% endif %}
-
   </div>
 
-  <!-- Colonne droite -->
-  <div class="col-md-4">
+</div>{# /tab-content #}
 
-    <!-- Allergènes -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-triangle-exclamation"></i> Allergènes
-        </h5>
-      </div>
-      <div class="card-body">
-        {% if ingredient.allergens.exists %}
-          <div class="d-flex flex-wrap gap-2">
-            {% for a in ingredient.allergens.all %}
-            <span class="badge badge-warning">{{ a.name }}</span>
-            {% endfor %}
-          </div>
-        {% else %}
-          <span class="text-muted">Aucun allergène déclaré</span>
-        {% endif %}
-      </div>
+{# ── Drawer latéral — historique prix ────────────────────────────────────── #}
+<div id="price-drawer" class="price-drawer">
+  <div class="price-drawer-backdrop" onclick="document.getElementById('price-drawer').classList.remove('open')"></div>
+  <div class="price-drawer-panel">
+    <div class="price-drawer-header">
+      <span class="fw-bold">Historique des prix</span>
+      <button class="btn btn-ghost btn-icon"
+              onclick="document.getElementById('price-drawer').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
     </div>
-
-    <!-- Températures -->
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-temperature-half"></i> Températures
-        </h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-2">
-          <div class="col-12">
-            <div class="form-label">Cuisson cible</div>
-            <div>{% if ingredient.target_cooking_temp %}{{ ingredient.target_cooking_temp }}°C{% else %}—{% endif %}</div>
-          </div>
-          <div class="col-6">
-            <div class="form-label">Conservation min</div>
-            <div>{% if ingredient.target_keeping_temp_min %}{{ ingredient.target_keeping_temp_min }}°C{% else %}—{% endif %}</div>
-          </div>
-          <div class="col-6">
-            <div class="form-label">Conservation max</div>
-            <div>{% if ingredient.target_keeping_temp_max %}{{ ingredient.target_keeping_temp_max }}°C{% else %}—{% endif %}</div>
-          </div>
-        </div>
-      </div>
+    <div class="price-drawer-body">
+      {# Contenu chargé par HTMX #}
     </div>
-
-    <!-- CIQUAL -->
-    {% if ingredient.ciqual_ref %}
-    <div class="card">
-      <div class="card-body">
-        <div class="form-label">Référence CIQUAL</div>
-        <div class="text-muted" style="font-size:var(--font-size-sm)">
-          {{ ingredient.ciqual_ref.name_fr }}
-          <span class="badge badge-muted ms-1">{{ ingredient.ciqual_ref.ciqual_code }}</span>
-        </div>
-      </div>
-    </div>
-    {% endif %}
-
-    <!-- COMPOSITION -->
-    {% if ingredient.label_photo %}
-  <div class="card mt-4">
-    <div class="card-header">
-      <h5 class="card-title">
-        <i class="fa-solid fa-camera"></i> Photo étiquette
-      </h5>
-      <span class="badge badge-success">
-        <i class="fa-solid fa-wand-magic-sparkles"></i> OCR actif
-      </span>
-    </div>
-    <div class="card-body p-2">
-      <img src="{{ ingredient.label_photo.url }}"
-           alt="Étiquette {{ ingredient.name }}"
-           class="img-fluid rounded"
-           style="cursor:zoom-in"
-           onclick="this.style.transform = this.style.transform ? '' : 'scale(2)'; this.style.transition='transform 0.3s'">
-      <div class="mt-3 px-2 pb-2">
-        <a href="{% url 'catalog:ingredient_edit' ingredient.pk %}"
-           class="btn btn-light btn-sm w-100">
-          <i class="fa-solid fa-arrow-rotate-right"></i> Relire l'étiquette
-        </a>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
   </div>
 </div>
+
 {% endblock %}

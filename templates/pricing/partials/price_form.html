@@ -1,0 +1,41 @@
+<div class="price-drawer-header">
+  <span class="fw-bold">Nouveau prix — {{ ingredient.name }}</span>
+  <button class="btn btn-ghost btn-icon"
+          onclick="document.getElementById('price-drawer').classList.remove('open')">
+    <i class="fa-solid fa-xmark"></i>
+  </button>
+</div>
+<div class="price-drawer-body">
+  <form hx-post="{% url 'pricing:ingredient_price_add' ingredient.pk %}"
+        hx-target="#price-drawer"
+        hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Prix HT (€)</label>
+      {{ form.price_ht }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Valide à partir du</label>
+      {{ form.valid_from }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Valide jusqu'au <span class="text-muted">(optionnel)</span></label>
+      {{ form.valid_until }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Notes</label>
+      {{ form.notes }}
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> Enregistrer
+      </button>
+      <button type="button" class="btn btn-ghost"
+              hx-get="{% url 'pricing:ingredient_price_drawer' ingredient.pk %}"
+              hx-target="#price-drawer"
+              hx-swap="innerHTML">
+        Annuler
+      </button>
+    </div>
+  </form>
+</div>

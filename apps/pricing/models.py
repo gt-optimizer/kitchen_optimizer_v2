@@ -47,6 +47,16 @@ class PriceRecord(models.Model):
     )
 
     # ── Canal & Prix ──────────────────────────────────────────────────────────
+    SOURCE_CHOICES = [
+        ("manual", "Saisie manuelle"),
+        ("ocr_bl", "OCR bon de livraison"),
+        ("ocr_invoice", "OCR facture"),
+        ("import", "Import fichier"),
+    ]
+    source = models.CharField(
+        max_length=20, choices=SOURCE_CHOICES,
+        default="manual", verbose_name="Source"
+    )
     channel = models.CharField(
         max_length=20, choices=CHANNEL_CHOICES,
         verbose_name="Canal"

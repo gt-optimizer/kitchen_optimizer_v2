@@ -15,4 +15,5 @@ urlpatterns = [
     path("planning/", include("apps.planning.urls")),
     path("sales/", include("apps.sales.urls")),
     path("pms/", include("apps.pms.urls")),
+    path("pricing/", include("apps.pricing.urls", namespace="pricing")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

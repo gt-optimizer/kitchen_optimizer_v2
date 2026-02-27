@@ -1,0 +1,58 @@
+{# Contenu du drawer — rechargé par HTMX après chaque action #}
+<div class="price-drawer-header">
+  <span class="fw-bold">Historique — {{ ingredient.name }}</span>
+  <button class="btn btn-ghost btn-icon"
+          onclick="document.getElementById('price-drawer').classList.remove('open')">
+    <i class="fa-solid fa-xmark"></i>
+  </button>
+</div>
+<div class="price-drawer-body">
+  <div class="mb-3">
+    <button class="btn btn-primary btn-sm"
+            hx-get="{% url 'pricing:ingredient_price_add' ingredient.pk %}"
+            hx-target="#price-drawer"
+            hx-swap="innerHTML">
+      <i class="fa-solid fa-plus"></i> Nouveau prix
+    </button>
+  </div>
+
+  {% if prices %}
+  <table class="table-atelier">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Prix HT</th>
+        <th>Jusqu'au</th>
+        <th>Notes</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in prices %}
+      <tr {% if p.is_current %}style="background:var(--color-primary-faint)"{% endif %}>
+        <td>
+          {{ p.valid_from|date:"d/m/Y" }}
+          {% if p.is_current %}
+            <span class="badge badge-success ms-1">Actif</span>
+          {% endif %}
+        </td>
+        <td class="fw-bold">{{ p.price_ht }} €</td>
+        <td>{{ p.valid_until|date:"d/m/Y"|default:"—" }}</td>
+        <td class="text-muted">{{ p.notes|default:"—" }}</td>
+        <td>
+          <button class="btn btn-danger btn-icon btn-sm"
+                  hx-post="{% url 'pricing:ingredient_price_delete' p.pk %}"
+                  hx-target="#price-drawer"
+                  hx-swap="innerHTML"
+                  hx-confirm="Supprimer ce prix ?">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="text-muted">Aucun prix enregistré.</div>
+  {% endif %}
+</div>
