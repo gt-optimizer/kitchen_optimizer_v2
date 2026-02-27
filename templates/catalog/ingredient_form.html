@@ -4,6 +4,8 @@
 {% block nav_catalog %}active{% endblock %}
 
 {% block content %}
+
+{# ── En-tête ─────────────────────────────────────────────────────────────── #}
 <div class="d-flex align-items-center gap-3 mb-4">
   <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost btn-icon">
     <i class="fa-solid fa-arrow-left"></i>
@@ -13,175 +15,360 @@
 
 <form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
+
+  {# Erreurs globales #}
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger mb-4">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    {{ form.non_field_errors }}
+  </div>
+  {% endif %}
+
   <div class="row g-4">
 
-    <!-- Colonne gauche -->
+    {# ── Colonne principale ───────────────────────────────────────────────── #}
     <div class="col-md-8">
+      <div class="accordion" id="ingredientAccordion">
 
-      <!-- Informations générales -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="card-title">
-            <i class="fa-solid fa-info-circle"></i> Informations générales
-          </h5>
+        {# ═══ 1. Infos générales (ouvert par défaut) ══════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-infos">
+              <i class="fa-solid fa-info-circle me-2 text-primary"></i>
+              Informations générales
+            </button>
+          </h2>
+          <div id="acc-infos" class="accordion-collapse collapse show"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label">Nom *</label>
+                  {{ form.name }}
+                  {% if form.name.errors %}
+                  <div class="text-danger" style="font-size:var(--font-size-xs)">{{ form.name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Catégorie</label>
+                  {{ form.category }}
+                </div>
+                <div class="col-12">
+                  <div class="d-flex gap-4 flex-wrap">
+                    <div class="form-check">
+                      {{ form.is_organic }}
+                      <label class="form-check-label" for="{{ form.is_organic.id_for_label }}">
+                        <i class="fa-solid fa-seedling text-success"></i> Bio
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      {{ form.is_vegan }}
+                      <label class="form-check-label" for="{{ form.is_vegan.id_for_label }}">
+                        <i class="fa-solid fa-leaf text-success"></i> Végan
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      {{ form.is_veggie }}
+                      <label class="form-check-label" for="{{ form.is_veggie.id_for_label }}">
+                        <i class="fa-solid fa-carrot text-success"></i> Végétarien
+                      </label>
+                    </div>
+                    <div class="form-check">
+                      {{ form.is_active }}
+                      <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                        <i class="fa-solid fa-circle-check text-success"></i> Actif
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">
+                    <i class="fa-solid fa-camera"></i> Photo de l'étiquette
+                  </label>
+                  {% if ingredient.label_photo %}
+                  <div class="mb-2">
+                    <img src="{{ ingredient.label_photo.url }}"
+                         alt="Étiquette actuelle"
+                         style="height:60px; border-radius:var(--radius-sm); border:1px solid var(--color-border)">
+                    <span class="text-muted ms-2" style="font-size:var(--font-size-xs)">Photo actuelle</span>
+                  </div>
+                  {% endif %}
+                  <div class="d-flex gap-2 align-items-center flex-wrap">
+                    {{ form.label_photo }}
+                    <label class="btn btn-light btn-sm hide-desktop" style="cursor:pointer">
+                      <i class="fa-solid fa-camera"></i> Prendre en photo
+                      <input type="file" name="label_photo" accept="image/*" capture="environment"
+                             style="display:none">
+                    </label>
+                  </div>
+                  <div class="form-hint">Photo pour lecture OCR automatique des valeurs nutritionnelles</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-8">
-              <label class="form-label">Nom *</label>
-              {{ form.name }}
-              {% if form.name.errors %}
-              <div class="text-danger" style="font-size:var(--font-size-xs)">{{ form.name.errors.0 }}</div>
+
+        {# ═══ 2. Conditionnement & rendement (fermé) ══════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-cond">
+              <i class="fa-solid fa-scale-balanced me-2 text-primary"></i>
+              Conditionnement & rendement
+            </button>
+          </h2>
+          <div id="acc-cond" class="accordion-collapse collapse"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">Unité d'achat *</label>
+                  {{ form.purchase_unit }}
+                  <div class="form-hint">Comment vous l'achetez (colis, paquet, pièce…)</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Unité d'utilisation *</label>
+                  {{ form.use_unit }}
+                  <div class="form-hint">Comment vous l'utilisez en recette</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Poids net total (kg)</label>
+                  {{ form.net_weight_kg }}
+                  <div class="form-hint">Poids total de l'unité d'achat</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Volume net total (l)</label>
+                  {{ form.net_volume_l }}
+                  <div class="form-hint">Volume total de l'unité d'achat</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Densité (kg/l)</label>
+                  {{ form.density_kg_per_l }}
+                  <div class="form-hint">Ex: huile=0.800, eau=1.000</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Pièces / paquet</label>
+                  {{ form.pieces_per_package }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Paquets / unité d'achat</label>
+                  {{ form.packages_per_purchase_unit }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Rendement (%)</label>
+                  {{ form.yield_rate }}
+                  <div class="form-hint">{{ form.yield_rate.help_text }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ═══ 3. Températures (fermé) ══════════════════════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-temp">
+              <i class="fa-solid fa-temperature-half me-2 text-primary"></i>
+              Températures
+            </button>
+          </h2>
+          <div id="acc-temp" class="accordion-collapse collapse"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">T° cible cuisson (°C)</label>
+                  {{ form.target_cooking_temp }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">T° conservation min (°C)</label>
+                  {{ form.target_keeping_temp_min }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">T° conservation max (°C)</label>
+                  {{ form.target_keeping_temp_max }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ═══ 4. Allergènes & composition (fermé) ══════════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-allergens">
+              <i class="fa-solid fa-triangle-exclamation me-2 text-primary"></i>
+              Allergènes & composition
+            </button>
+          </h2>
+          <div id="acc-allergens" class="accordion-collapse collapse"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label">Allergènes (14 allergènes UE)</label>
+                  <div class="d-flex flex-wrap gap-3">
+                    {{ form.allergens }}
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Composition / étiquette</label>
+                  {{ form.composition }}
+                  <div class="form-hint">Texte de la liste des ingrédients sur l'étiquette</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ═══ 5. Valeurs nutritionnelles (fermé) ══════════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-nutri">
+              <i class="fa-solid fa-apple-whole me-2 text-primary"></i>
+              Valeurs nutritionnelles
+              <span class="badge badge-muted ms-2" style="font-size:var(--font-size-xs)">pour 100g</span>
+            </button>
+          </h2>
+          <div id="acc-nutri" class="accordion-collapse collapse"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              <div class="mb-3">
+                <label class="form-label">Référence CIQUAL</label>
+                {{ form.ciqual_ref }}
+                <div class="form-hint">Lien vers la base ANSES — remplit automatiquement les valeurs ci-dessous</div>
+              </div>
+              <hr class="divider">
+              <div class="row g-3">
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.energy_kj.label }}</label>
+                  {{ form.energy_kj }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.energy_kcal.label }}</label>
+                  {{ form.energy_kcal }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.fat.label }}</label>
+                  {{ form.fat }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.saturates.label }}</label>
+                  {{ form.saturates }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.carbohydrates.label }}</label>
+                  {{ form.carbohydrates }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.sugars.label }}</label>
+                  {{ form.sugars }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.protein.label }}</label>
+                  {{ form.protein }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.salt.label }}</label>
+                  {{ form.salt }}
+                </div>
+                <div class="col-6 col-md-3">
+                  <label class="form-label">{{ form.fiber.label }}</label>
+                  {{ form.fiber }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ═══ 6. Prix d'achat (fermé) ══════════════════════════════════════ #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-prix">
+              <i class="fa-solid fa-euro-sign me-2 text-primary"></i>
+              Prix d'achat
+              {% if has_price %}
+                <span class="badge badge-success ms-2">{{ current_price }} €</span>
+              {% else %}
+                <span class="badge badge-warning ms-2">Non renseigné</span>
+              {% endif %}
+            </button>
+          </h2>
+          <div id="acc-prix" class="accordion-collapse collapse"
+               data-bs-parent="#ingredientAccordion">
+            <div class="accordion-body">
+              {% if has_price %}
+                <div class="alert alert-info">
+                  <i class="fa-solid fa-circle-info"></i>
+                  Prix actuel : <strong>{{ current_price }} € HT</strong>.
+                  Pour modifier ou consulter l'historique, rendez-vous sur la
+                  <a href="{% url 'catalog:ingredient_detail' ingredient.pk %}#tab-prix">fiche détail</a>.
+                </div>
+              {% else %}
+                <div class="alert alert-warning mb-3">
+                  <i class="fa-solid fa-triangle-exclamation"></i>
+                  Aucun prix d'achat enregistré. Le coût de revient des recettes ne pourra pas être calculé.
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Prix HT (€) *</label>
+                    {{ price_form.price_ht }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Valide à partir du *</label>
+                    {{ price_form.valid_from }}
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Notes</label>
+                    {{ price_form.notes }}
+                  </div>
+                </div>
               {% endif %}
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Catégorie</label>
-              {{ form.category }}
-            </div>
-            <div class="col-12">
-              <div class="d-flex gap-4">
-                <div class="form-check">
-                  {{ form.is_organic }}
-                  <label class="form-check-label" for="{{ form.is_organic.id_for_label }}">
-                    <i class="fa-solid fa-seedling text-success"></i> Bio
-                  </label>
-                </div>
-                <div class="form-check">
-                  {{ form.is_vegan }}
-                  <label class="form-check-label" for="{{ form.is_vegan.id_for_label }}">
-                    <i class="fa-solid fa-leaf text-success"></i> Végan
-                  </label>
-                </div>
-                <div class="form-check">
-                  {{ form.is_veggie }}
-                  <label class="form-check-label" for="{{ form.is_veggie.id_for_label }}">
-                    <i class="fa-solid fa-carrot text-success"></i> Végétarien
-                  </label>
-                </div>
-
-              </div>
-              <div class="col-12">
-                <label class="form-label">
-                  <i class="fa-solid fa-camera"></i> Photo de l'étiquette
-                </label>
-                <div class="d-flex gap-2 align-items-center flex-wrap">
-                  {{ form.label_photo }}
-                  <label class="btn btn-light btn-sm hide-desktop" style="cursor:pointer">
-                    <i class="fa-solid fa-camera"></i> Prendre en photo
-                    <input type="file" name="label_photo" accept="image/*" capture="environment"
-                           style="display:none">
-                  </label>
-                </div>
-                <div class="form-hint">Photo pour lecture OCR automatique</div>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Unités & conditionnement -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="card-title">
-            <i class="fa-solid fa-scale-balanced"></i> Unités & conditionnement
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Unité d'achat *</label>
-              {{ form.purchase_unit }}
-              <div class="form-hint">Comment vous l'achetez</div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Unité d'utilisation *</label>
-              {{ form.use_unit }}
-              <div class="form-hint">Comment vous l'utilisez en recette</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Poids net (kg/unité)</label>
-              {{ form.net_weight_kg }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Volume net (l/unité)</label>
-              {{ form.net_volume_l }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Pièces / paquet</label>
-              {{ form.pieces_per_package }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Paquets / unité d'achat</label>
-              {{ form.packages_per_purchase_unit }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Rendement</label>
-              {{ form.yield_rate }}
-              <div class="form-hint">Ex: 0.85 = 85% utilisable</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Prix de référence HT</label>
-              {{ form.reference_price }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Températures -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <h5 class="card-title">
-            <i class="fa-solid fa-temperature-half"></i> Températures
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">T° cible cuisson (°C)</label>
-              {{ form.target_cooking_temp }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">T° conservation min (°C)</label>
-              {{ form.target_keeping_temp_min }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">T° conservation max (°C)</label>
-              {{ form.target_keeping_temp_max }}
-            </div>
-          </div>
-        </div>
-      </div>
-
+      </div>{# /accordion #}
     </div>
 
-    <!-- Colonne droite -->
+    {# ── Colonne droite : actions ──────────────────────────────────────────── #}
     <div class="col-md-4">
-
-      <!-- Allergènes -->
-      <div class="card mb-4">
+      <div class="card" style="position:sticky; top: calc(var(--navbar-height) + var(--space-6))">
         <div class="card-header">
           <h5 class="card-title">
-            <i class="fa-solid fa-triangle-exclamation"></i> Allergènes
+            <i class="fa-solid fa-floppy-disk"></i> Enregistrer
           </h5>
         </div>
-        <div class="card-body">
-          {{ form.allergens }}
-        </div>
-      </div>
-
-      <!-- Actions -->
-      <div class="card">
         <div class="card-body d-flex flex-column gap-2">
           <button type="submit" class="btn btn-primary">
             <i class="fa-solid fa-floppy-disk"></i> Enregistrer
           </button>
+          {% if ingredient %}
+          <a href="{% url 'catalog:ingredient_detail' ingredient.pk %}" class="btn btn-ghost">
+            <i class="fa-solid fa-eye"></i> Voir la fiche
+          </a>
+          {% endif %}
           <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost">
             <i class="fa-solid fa-xmark"></i> Annuler
           </a>
         </div>
+        {% if ingredient %}
+        <div class="card-footer">
+          <div class="text-muted" style="font-size:var(--font-size-xs)">
+            <i class="fa-solid fa-clock me-1"></i>
+            Modifié le {{ ingredient.updated_at|date:"d/m/Y à H:i" }}
+          </div>
+        </div>
+        {% endif %}
       </div>
-
     </div>
+
   </div>
 </form>
+
 {% endblock %}

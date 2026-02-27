@@ -112,11 +112,9 @@ class PriceRecord(models.Model):
         ]
 
     def clean(self):
-        # XOR ingredient / recipe
+        # XOR uniquement si les deux sont renseignés simultanément
         if self.ingredient and self.recipe:
             raise ValidationError("Un PriceRecord ne peut pas être lié à la fois à un ingrédient et une recette.")
-        if not self.ingredient and not self.recipe:
-            raise ValidationError("Un PriceRecord doit être lié à un ingrédient ou une recette.")
 
         # Cohérence canal / prix
         if self.channel == "purchase":

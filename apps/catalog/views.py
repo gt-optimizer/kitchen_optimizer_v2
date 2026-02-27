@@ -2,10 +2,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
-from apps.company.mixins import get_current_company
+from django.utils import timezone
 
+from apps.company.mixins import get_current_company
 from .models import Ingredient, IngredientCategory
 from .forms import IngredientForm
+from apps.pricing.forms import PriceRecordForm
+from apps.pricing.models import PriceRecord
 
 
 
@@ -48,28 +51,42 @@ def ingredient_list(request):
 def ingredient_create(request):
     if request.method == "POST":
         form = IngredientForm(request.POST, request.FILES)
+        price_form = PriceRecordForm(request.POST)
         if form.is_valid():
             ingredient = form.save(commit=False)
             ingredient.tenant = request.tenant
             ingredient.save()
+            form.save_m2m()
 
-            # Vérifie si un résultat OCR est disponible
+            # Sauvegarde du prix si renseigné
+            if price_form.is_valid() and price_form.cleaned_data.get("price_ht"):
+                record = price_form.save(commit=False)
+                record.tenant = request.tenant
+                record.ingredient = ingredient
+                record.channel = "purchase"
+                record.source = "manual"
+                record.save()
+
+            # OCR
             from django.core.cache import cache
             ocr_result = cache.get(f"ocr_result_{ingredient.pk}")
             if ocr_result and ocr_result.get("fields_filled"):
                 n = len(ocr_result["fields_filled"])
                 engine = ocr_result.get("engine", "")
-                messages.info(request,
-                              f"OCR ({engine}) : {n} champ(s) rempli(s) automatiquement depuis l'étiquette.")
+                messages.info(request, f"OCR ({engine}) : {n} champ(s) rempli(s) automatiquement.")
 
-            form.save_m2m()
             messages.success(request, f"Ingrédient « {ingredient.name} » créé.")
-            return redirect("catalog:ingredient_list")
+            return redirect("catalog:ingredient_detail", pk=ingredient.pk)
     else:
         form = IngredientForm()
+        price_form = PriceRecordForm(initial={"valid_from": timezone.localdate()})
 
     return render(request, "catalog/ingredient_form.html", {
-        "form": form, "action": "Créer un ingrédient"
+        "form": form,
+        "price_form": price_form,
+        "has_price": False,
+        "current_price": None,
+        "action": "Créer un ingrédient",
     })
 
 
@@ -100,31 +117,57 @@ def ingredient_detail(request, pk):
 @login_required
 def ingredient_edit(request, pk):
     ingredient = get_object_or_404(Ingredient, pk=pk)
+
+    # Prix courant
+    today = timezone.localdate()
+    current_record = (
+        PriceRecord.objects
+        .filter(ingredient=ingredient, channel="purchase", valid_from__lte=today)
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .order_by("-valid_from")
+        .first()
+    )
+    has_price = current_record is not None
+    current_price = current_record.price_ht if current_record else None
+
     if request.method == "POST":
         form = IngredientForm(request.POST, request.FILES, instance=ingredient)
+        price_form = PriceRecordForm(request.POST)
         if form.is_valid():
             form.save()
 
-            # Vérifie si un résultat OCR est disponible
+            # Sauvegarde prix uniquement si pas encore de prix
+            if not has_price and price_form.is_valid() and price_form.cleaned_data.get("price_ht"):
+                record = price_form.save(commit=False)
+                record.tenant = request.tenant
+                record.ingredient = ingredient
+                record.channel = "purchase"
+                record.source = "manual"
+                record.save()
+
+            # OCR
             from django.core.cache import cache
             ocr_result = cache.get(f"ocr_result_{ingredient.pk}")
             if ocr_result and ocr_result.get("fields_filled"):
                 n = len(ocr_result["fields_filled"])
                 engine = ocr_result.get("engine", "")
-                messages.info(request,
-                              f"OCR ({engine}) : {n} champ(s) rempli(s) automatiquement depuis l'étiquette.")
+                messages.info(request, f"OCR ({engine}) : {n} champ(s) rempli(s) automatiquement.")
 
             messages.success(request, f"Ingrédient « {ingredient.name} » mis à jour.")
-            return redirect("catalog:ingredient_list")
+            return redirect("catalog:ingredient_detail", pk=ingredient.pk)
         else:
             print("ERREURS FORM:", form.errors)
     else:
         form = IngredientForm(instance=ingredient)
+        price_form = PriceRecordForm(initial={"valid_from": timezone.localdate()})
 
     return render(request, "catalog/ingredient_form.html", {
         "form": form,
+        "price_form": price_form,
+        "has_price": has_price,
+        "current_price": current_price,
         "ingredient": ingredient,
-        "action": "Modifier l'ingrédient"
+        "action": "Modifier l'ingrédient",
     })
 
 

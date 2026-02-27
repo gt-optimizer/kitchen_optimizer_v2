@@ -847,3 +847,7 @@ h6, .h6 { font-size: var(--font-size-sm);  font-weight: 600; }
   overflow-y: auto;
   padding: var(--space-6);
 }
+
+.price-drawer-panel {
+  pointer-events: all;
+}

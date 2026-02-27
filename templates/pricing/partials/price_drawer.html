@@ -1,16 +1,8 @@
-{# Contenu du drawer — rechargé par HTMX après chaque action #}
-<div class="price-drawer-header">
-  <span class="fw-bold">Historique — {{ ingredient.name }}</span>
-  <button class="btn btn-ghost btn-icon"
-          onclick="document.getElementById('price-drawer').classList.remove('open')">
-    <i class="fa-solid fa-xmark"></i>
-  </button>
-</div>
 <div class="price-drawer-body">
   <div class="mb-3">
     <button class="btn btn-primary btn-sm"
             hx-get="{% url 'pricing:ingredient_price_add' ingredient.pk %}"
-            hx-target="#price-drawer"
+            hx-target="#price-drawer-content"
             hx-swap="innerHTML">
       <i class="fa-solid fa-plus"></i> Nouveau prix
     </button>
@@ -42,7 +34,7 @@
         <td>
           <button class="btn btn-danger btn-icon btn-sm"
                   hx-post="{% url 'pricing:ingredient_price_delete' p.pk %}"
-                  hx-target="#price-drawer"
+                  hx-target="#price-drawer-content"
                   hx-swap="innerHTML"
                   hx-confirm="Supprimer ce prix ?">
             <i class="fa-solid fa-trash"></i>

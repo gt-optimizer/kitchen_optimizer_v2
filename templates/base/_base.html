@@ -259,5 +259,11 @@
 
 {% block extra_js %}{% endblock %}
 
+<script>
+  // HTMX — envoie le token CSRF dans tous les headers
+  document.addEventListener("htmx:configRequest", function(evt) {
+    evt.detail.headers["X-CSRFToken"] = "{{ csrf_token }}";
+  });
+</script>
 </body>
 </html>

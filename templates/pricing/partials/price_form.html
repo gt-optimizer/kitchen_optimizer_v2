@@ -1,13 +1,6 @@
-<div class="price-drawer-header">
-  <span class="fw-bold">Nouveau prix — {{ ingredient.name }}</span>
-  <button class="btn btn-ghost btn-icon"
-          onclick="document.getElementById('price-drawer').classList.remove('open')">
-    <i class="fa-solid fa-xmark"></i>
-  </button>
-</div>
 <div class="price-drawer-body">
   <form hx-post="{% url 'pricing:ingredient_price_add' ingredient.pk %}"
-        hx-target="#price-drawer"
+        hx-target="#price-drawer-content"
         hx-swap="innerHTML">
     {% csrf_token %}
     <div class="mb-3">
@@ -32,7 +25,7 @@
       </button>
       <button type="button" class="btn btn-ghost"
               hx-get="{% url 'pricing:ingredient_price_drawer' ingredient.pk %}"
-              hx-target="#price-drawer"
+              hx-target="#price-drawer-content"
               hx-swap="innerHTML">
         Annuler
       </button>
