@@ -1,0 +1,32 @@
+{% extends "base/_base.html" %}
+{% block title %}Supprimer {{ ingredient.name }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title text-danger">
+          <i class="fa-solid fa-triangle-exclamation"></i> Confirmer la suppression
+        </h5>
+      </div>
+      <div class="card-body">
+        <p>Voulez-vous vraiment supprimer l'ingrédient <strong>{{ ingredient.name }}</strong> ?</p>
+        <p class="text-muted" style="font-size:var(--font-size-sm)">
+          Cette action est irréversible.
+        </p>
+        <form method="post" class="d-flex gap-3 mt-4">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fa-solid fa-trash"></i> Supprimer
+          </button>
+          <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost">
+            <i class="fa-solid fa-xmark"></i> Annuler
+          </a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

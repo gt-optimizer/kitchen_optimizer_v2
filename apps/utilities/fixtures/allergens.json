@@ -1,0 +1,16 @@
+[
+  {"model": "utilities.allergen", "pk": 1,  "fields": {"name": "Gluten"}},
+  {"model": "utilities.allergen", "pk": 2,  "fields": {"name": "Crustacés"}},
+  {"model": "utilities.allergen", "pk": 3,  "fields": {"name": "Œufs"}},
+  {"model": "utilities.allergen", "pk": 4,  "fields": {"name": "Poissons"}},
+  {"model": "utilities.allergen", "pk": 5,  "fields": {"name": "Arachides"}},
+  {"model": "utilities.allergen", "pk": 6,  "fields": {"name": "Soja"}},
+  {"model": "utilities.allergen", "pk": 7,  "fields": {"name": "Lait"}},
+  {"model": "utilities.allergen", "pk": 8,  "fields": {"name": "Fruits à coque"}},
+  {"model": "utilities.allergen", "pk": 9,  "fields": {"name": "Céleri"}},
+  {"model": "utilities.allergen", "pk": 10, "fields": {"name": "Moutarde"}},
+  {"model": "utilities.allergen", "pk": 11, "fields": {"name": "Sésame"}},
+  {"model": "utilities.allergen", "pk": 12, "fields": {"name": "Sulfites"}},
+  {"model": "utilities.allergen", "pk": 13, "fields": {"name": "Lupin"}},
+  {"model": "utilities.allergen", "pk": 14, "fields": {"name": "Mollusques"}}
+]

@@ -1,0 +1,80 @@
+{% load static %}
+<table class="table-atelier w-100">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th class="hide-mobile">Catégorie</th>
+      <th class="hide-mobile">Unité achat</th>
+      <th class="hide-mobile">Prix réf. HT</th>
+      <th>Flags</th>
+      <th class="text-end">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ing in ingredients %}
+    <tr>
+      <td>
+        <div class="fw-600">{{ ing.name }}</div>
+        {% if ing.allergens.exists %}
+        <div class="mt-1">
+          {% for a in ing.allergens.all %}
+          <span class="badge badge-warning">{{ a.name }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </td>
+      <td class="hide-mobile text-muted">
+        {{ ing.category.name|default:"—" }}
+      </td>
+      <td class="hide-mobile">
+        {{ ing.get_purchase_unit_display }}
+      </td>
+      <td class="hide-mobile">
+        {% if ing.reference_price %}
+          <span class="fw-600">{{ ing.reference_price }} €</span>
+        {% else %}
+          <span class="text-muted">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if ing.is_organic %}
+        <span class="badge badge-success" title="Bio">
+          <i class="fa-solid fa-seedling"></i>
+        </span>
+        {% endif %}
+        {% if ing.is_vegan %}
+        <span class="badge badge-success" title="Végan">V</span>
+        {% endif %}
+        {% if ing.is_veggie %}
+        <span class="badge badge-primary" title="Végétarien">
+          <i class="fa-solid fa-leaf"></i>
+        </span>
+        {% endif %}
+      </td>
+      <td>
+        <div class="table-actions">
+          <a href="{% url 'catalog:ingredient_detail' ing.pk %}"
+             class="btn btn-ghost btn-icon btn-sm" title="Voir">
+            <i class="fa-solid fa-eye"></i>
+          </a>
+          <a href="{% url 'catalog:ingredient_edit' ing.pk %}"
+             class="btn btn-secondary btn-icon btn-sm" title="Modifier">
+            <i class="fa-solid fa-pen"></i>
+          </a>
+          <a href="{% url 'catalog:ingredient_delete' ing.pk %}"
+             class="btn btn-danger btn-icon btn-sm" title="Supprimer">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="6" class="text-center text-muted py-5">
+        <i class="fa-solid fa-box-open fa-2x mb-3 d-block"></i>
+        Aucun ingrédient trouvé
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

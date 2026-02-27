@@ -1,0 +1,187 @@
+{% extends "base/_base.html" %}
+{% load static %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ action }}</h1>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+
+    <!-- Colonne gauche -->
+    <div class="col-md-8">
+
+      <!-- Informations générales -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="fa-solid fa-info-circle"></i> Informations générales
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Nom *</label>
+              {{ form.name }}
+              {% if form.name.errors %}
+              <div class="text-danger" style="font-size:var(--font-size-xs)">{{ form.name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Catégorie</label>
+              {{ form.category }}
+            </div>
+            <div class="col-12">
+              <div class="d-flex gap-4">
+                <div class="form-check">
+                  {{ form.is_organic }}
+                  <label class="form-check-label" for="{{ form.is_organic.id_for_label }}">
+                    <i class="fa-solid fa-seedling text-success"></i> Bio
+                  </label>
+                </div>
+                <div class="form-check">
+                  {{ form.is_vegan }}
+                  <label class="form-check-label" for="{{ form.is_vegan.id_for_label }}">
+                    <i class="fa-solid fa-leaf text-success"></i> Végan
+                  </label>
+                </div>
+                <div class="form-check">
+                  {{ form.is_veggie }}
+                  <label class="form-check-label" for="{{ form.is_veggie.id_for_label }}">
+                    <i class="fa-solid fa-carrot text-success"></i> Végétarien
+                  </label>
+                </div>
+
+              </div>
+              <div class="col-12">
+                <label class="form-label">
+                  <i class="fa-solid fa-camera"></i> Photo de l'étiquette
+                </label>
+                <div class="d-flex gap-2 align-items-center flex-wrap">
+                  {{ form.label_photo }}
+                  <label class="btn btn-light btn-sm hide-desktop" style="cursor:pointer">
+                    <i class="fa-solid fa-camera"></i> Prendre en photo
+                    <input type="file" name="label_photo" accept="image/*" capture="environment"
+                           style="display:none">
+                  </label>
+                </div>
+                <div class="form-hint">Photo pour lecture OCR automatique</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unités & conditionnement -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="fa-solid fa-scale-balanced"></i> Unités & conditionnement
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Unité d'achat *</label>
+              {{ form.purchase_unit }}
+              <div class="form-hint">Comment vous l'achetez</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Unité d'utilisation *</label>
+              {{ form.use_unit }}
+              <div class="form-hint">Comment vous l'utilisez en recette</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Poids net (kg/unité)</label>
+              {{ form.net_weight_kg }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Volume net (l/unité)</label>
+              {{ form.net_volume_l }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Pièces / paquet</label>
+              {{ form.pieces_per_package }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Paquets / unité d'achat</label>
+              {{ form.packages_per_purchase_unit }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Rendement</label>
+              {{ form.yield_rate }}
+              <div class="form-hint">Ex: 0.85 = 85% utilisable</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Prix de référence HT</label>
+              {{ form.reference_price }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Températures -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="fa-solid fa-temperature-half"></i> Températures
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">T° cible cuisson (°C)</label>
+              {{ form.target_cooking_temp }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">T° conservation min (°C)</label>
+              {{ form.target_keeping_temp_min }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">T° conservation max (°C)</label>
+              {{ form.target_keeping_temp_max }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-md-4">
+
+      <!-- Allergènes -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title">
+            <i class="fa-solid fa-triangle-exclamation"></i> Allergènes
+          </h5>
+        </div>
+        <div class="card-body">
+          {{ form.allergens }}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card">
+        <div class="card-body d-flex flex-column gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+          </button>
+          <a href="{% url 'catalog:ingredient_list' %}" class="btn btn-ghost">
+            <i class="fa-solid fa-xmark"></i> Annuler
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</form>
+{% endblock %}

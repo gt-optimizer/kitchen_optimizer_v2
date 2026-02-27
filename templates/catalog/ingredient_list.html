@@ -1,0 +1,66 @@
+{% extends "base/_base.html" %}
+{% load static %}
+{% block title %}Ingrédients — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-carrot"></i> Ingrédients
+  </h1>
+  <a href="{% url 'catalog:ingredient_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Ajouter
+  </a>
+</div>
+
+<!-- Barre recherche + filtres -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-5">
+        <input type="text"
+               name="q"
+               value="{{ q }}"
+               placeholder="Rechercher un ingrédient..."
+               class="form-control"
+               hx-get="{% url 'catalog:ingredient_search' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#ingredient-table"
+               hx-include="[name='category']">
+      </div>
+      <div class="col-md-3">
+        <select name="category"
+                class="form-select"
+                hx-get="{% url 'catalog:ingredient_search' %}"
+                hx-trigger="change"
+                hx-target="#ingredient-table"
+                hx-include="[name='q']">
+          <option value="">Toutes catégories</option>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}" {% if category_id == cat.pk|stringformat:"s" %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <div class="form-check">
+          <input type="checkbox" name="bio" id="bio" class="form-check-input"
+                 hx-get="{% url 'catalog:ingredient_search' %}"
+                 hx-trigger="change"
+                 hx-target="#ingredient-table"
+                 hx-include="[name='q'],[name='category']">
+          <label for="bio" class="form-check-label">Bio uniquement</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="card">
+  <div id="ingredient-table">
+    {% include "catalog/partials/ingredient_table.html" %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — L'Atelier</title>
+
+  <link rel="stylesheet" href="/static/vendors/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/vendors/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/charte.css">
+
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--color-bg);
+      padding: var(--space-4);
+    }
+
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .login-brand {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+
+    .login-brand .brand-name {
+      font-family: var(--font-title);
+      font-size: var(--font-size-3xl);
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-3);
+    }
+
+    .login-brand .brand-name i {
+      color: var(--color-primary-light);
+    }
+
+    .login-brand .brand-tagline {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+
+    .login-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      padding: var(--space-8);
+    }
+
+    .login-card h2 {
+      font-size: var(--font-size-xl);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: var(--space-6);
+      text-align: center;
+    }
+
+    .input-group-icon {
+      position: relative;
+    }
+
+    .input-group-icon i {
+      position: absolute;
+      left: var(--space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      font-size: var(--font-size-sm);
+      pointer-events: none;
+    }
+
+    .input-group-icon .form-control {
+      padding-left: calc(var(--space-3) * 2 + 16px);
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: var(--space-3);
+      font-size: var(--font-size-base);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-2);
+    }
+
+    .login-footer {
+      text-align: center;
+      margin-top: var(--space-6);
+      font-size: var(--font-size-xs);
+      color: var(--color-text-muted);
+    }
+
+    .antigaspi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      background: var(--color-primary-xlight);
+      color: var(--color-primary-dark);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      padding: var(--space-1) var(--space-3);
+      border-radius: var(--radius-full);
+      margin-top: var(--space-3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="login-wrapper">
+
+  <!-- Marque -->
+  <div class="login-brand">
+    <div class="brand-name">
+      <img src="/static/images/logo_sans_fond.png"
+           alt="L'Atelier"
+           style="height: 56px; width: auto;"> L'Atelier
+    </div>
+    <div class="brand-tagline">Gestion de production &amp; cuisine</div>
+    <div class="antigaspi-badge">
+      <i class="fa-solid fa-seedling"></i>
+      Produire juste, acheter juste, gaspiller moins
+    </div>
+  </div>
+
+  <!-- Carte de connexion -->
+  <div class="login-card">
+    <h2>Connexion</h2>
+
+    {% if messages %}
+      {% for message in messages %}
+      <div class="alert alert-danger mb-4">
+        <i class="fa-solid fa-circle-xmark"></i>
+        <div>{{ message }}</div>
+      </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="form-label" for="username">
+          Identifiant
+        </label>
+        <div class="input-group-icon">
+          <i class="fa-solid fa-user"></i>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            class="form-control"
+            placeholder="Votre identifiant"
+            value="{{ request.POST.username }}"
+            autocomplete="username"
+            autofocus
+            required>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label" for="password">
+          Mot de passe
+        </label>
+        <div class="input-group-icon" x-data="{ show: false }">
+          <i class="fa-solid fa-lock"></i>
+          <input
+            :type="show ? 'text' : 'password'"
+            id="password"
+            name="password"
+            class="form-control"
+            placeholder="Votre mot de passe"
+            autocomplete="current-password"
+            required>
+          <button type="button"
+                  @click="show = !show"
+                  class="btn btn-ghost btn-icon btn-sm"
+                  style="position:absolute; right: var(--space-2); top: 50%; transform: translateY(-50%)">
+            <i :class="show ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"
+               style="color: var(--color-text-muted)"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-login">
+        <i class="fa-solid fa-right-to-bracket"></i>
+        Se connecter
+      </button>
+    </form>
+  </div>
+
+  <div class="login-footer">
+    &copy; {% now "Y" %} L'Atelier by Optimizer Labs
+  </div>
+
+</div>
+
+<script src="/static/vendors/alpinejs/alpine.min.js" defer></script>
+</body>
+</html>

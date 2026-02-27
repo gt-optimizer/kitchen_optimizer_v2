@@ -1,0 +1,263 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="L'Atelier — Gestion de production">
+  <title>{% block title %}L'Atelier{% endblock %}</title>
+
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="/static/vendors/bootstrap/css/bootstrap.min.css">
+  <!-- FontAwesome 7 -->
+  <link rel="stylesheet" href="/static/vendors/fontawesome/css/all.min.css">
+  <!-- Charte L'Atelier -->
+  <link rel="stylesheet" href="/static/css/charte.css">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Navbar bureau ──────────────────────────────────────── -->
+<nav class="app-navbar">
+  <a href="{% url 'dashboard' %}" class="navbar-brand">
+    <img src="{% static 'images/logo_sans_fond.png' %}" alt="L'Atelier" style="height: 36px; width: auto;">
+    L'Atelier
+  </a>
+
+  <div class="d-none d-md-flex align-items-center gap-1 flex-grow-1 ms-4">
+    {% if user.is_authenticated %}
+      {% if perms_catalog %}
+      <a href="{% url 'catalog:ingredient_list' %}" class="atelier-nav-link {% block nav_catalog %}{% endblock %}">
+        <i class="fa-solid fa-book-open"></i> Catalogue
+      </a>
+      {% endif %}
+      {% if perms_purchasing %}
+      <a href="#" class="atelier-nav-link {% block nav_purchasing %}{% endblock %}">
+        <i class="fa-solid fa-truck"></i> Achats
+      </a>
+      {% endif %}
+      {% if perms_stock %}
+      <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
+        <i class="fa-solid fa-boxes-stacked"></i> Stock
+      </a>
+      {% endif %}
+      {% if perms_production %}
+      <a href="#" class="atelier-nav-link {% block nav_production %}{% endblock %}">
+        <i class="fa-solid fa-fire-burner"></i> Production
+      </a>
+      {% endif %}
+      {% if perms_planning %}
+      <a href="#" class="atelier-nav-link {% block nav_planning %}{% endblock %}">
+        <i class="fa-solid fa-calendar-days"></i> Planning
+      </a>
+      {% endif %}
+      {% if perms_pms %}
+      <a href="#" class="atelier-nav-link {% block nav_pms %}{% endblock %}">
+        <i class="fa-solid fa-shield-halved"></i> PMS
+      </a>
+      {% endif %}
+      {% if perms_sales %}
+      <a href="#" class="atelier-nav-link {% block nav_sales %}{% endblock %}">
+        <i class="fa-solid fa-chart-line"></i> CA
+      </a>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="d-flex align-items-center gap-3 ms-auto">
+    {% if user.is_authenticated %}
+      {% if current_company %}
+      <span class="badge badge-primary d-none d-md-inline-flex">
+        <i class="fa-solid fa-store"></i> {{ current_company.name }}
+      </span>
+      {% endif %}
+
+      <div class="dropdown" x-data="{ open: false }">
+        <button class="navbar-user" @click="open = !open" @click.away="open = false">
+          <div class="navbar-avatar">
+            {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+          </div>
+          <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+          <i class="fa-solid fa-chevron-down fa-xs d-none d-md-inline"></i>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow-sm"
+             x-show="open" x-transition
+             style="display:none; min-width:200px;">
+          <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+            <i class="fa-solid fa-right-from-bracket fa-fw me-2"></i> Déconnexion
+          </a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ── Contenu principal ──────────────────────────────────── -->
+<div class="app-layout">
+  <main class="app-content" id="main-content">
+
+    <!-- Messages Django (succès, erreurs...) -->
+    {% if messages %}
+    <div id="messages" class="mb-4">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible">
+        <i class="fa-solid
+          {% if message.tags == 'success' %}fa-circle-check
+          {% elif message.tags == 'error' %}fa-circle-xmark
+          {% elif message.tags == 'warning' %}fa-triangle-exclamation
+          {% else %}fa-circle-info{% endif %}"></i>
+        <div>{{ message }}</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+</div>
+
+<!-- ── Bottom nav mobile ──────────────────────────────────── -->
+{% if user.is_authenticated %}
+<nav class="bottom-nav">
+  <div class="bottom-nav-items">
+
+    <a href="{% url 'dashboard' %}"
+       class="bottom-nav-item {% block bottom_home %}{% endblock %}">
+      <i class="fa-solid fa-house"></i>
+      <span>Accueil</span>
+    </a>
+
+    {% if perms_production %}
+    <a href="#"
+       class="bottom-nav-item {% block bottom_production %}{% endblock %}">
+      <i class="fa-solid fa-fire-burner"></i>
+      <span>Production</span>
+    </a>
+    {% endif %}
+
+    {% if perms_pms %}
+    <a href="#"
+       class="bottom-nav-item {% block bottom_pms %}{% endblock %}">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>PMS</span>
+      {% if pms_alerts_count %}
+      <span class="badge-dot"></span>
+      {% endif %}
+    </a>
+    {% endif %}
+
+    {% if perms_stock %}
+    <a href="#"
+       class="bottom-nav-item {% block bottom_stock %}{% endblock %}">
+      <i class="fa-solid fa-boxes-stacked"></i>
+      <span>Stock</span>
+      {% if stock_alerts_count %}
+      <span class="badge-dot"></span>
+      {% endif %}
+    </a>
+    {% endif %}
+
+    <!-- "Plus" → ouvre un menu drawer avec le reste -->
+    <button class="bottom-nav-item"
+            x-data
+            @click="$dispatch('open-more-menu')">
+      <i class="fa-solid fa-bars"></i>
+      <span>Plus</span>
+    </button>
+
+  </div>
+</nav>
+
+<!-- Drawer "Plus" mobile -->
+<div x-data="{ open: false }"
+     @open-more-menu.window="open = true"
+     @keydown.escape.window="open = false">
+
+  <!-- Overlay -->
+  <div x-show="open"
+       x-transition.opacity
+       @click="open = false"
+       class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25"
+       style="z-index: 1050; display:none;"></div>
+
+  <!-- Drawer -->
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-y-full"
+       x-transition:enter-end="translate-y-0"
+       class="position-fixed bottom-0 start-0 end-0 bg-white rounded-top-4 p-4"
+       style="z-index: 1060; display:none; padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <span class="fw-bold" style="font-family: var(--font-title)">Menu</span>
+      <button @click="open = false" class="btn btn-ghost btn-icon">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="row g-3">
+      {% if perms_catalog %}
+      <div class="col-4">
+        <a href="#" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background: var(--color-primary-faint); color: var(--color-primary)">
+          <i class="fa-solid fa-book-open fa-lg"></i>
+          <span style="font-size: var(--font-size-xs); font-weight: 600">Catalogue</span>
+        </a>
+      </div>
+      {% endif %}
+      {% if perms_purchasing %}
+      <div class="col-4">
+        <a href="#" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background: var(--color-primary-faint); color: var(--color-primary)">
+          <i class="fa-solid fa-truck fa-lg"></i>
+          <span style="font-size: var(--font-size-xs); font-weight: 600">Achats</span>
+        </a>
+      </div>
+      {% endif %}
+      {% if perms_planning %}
+      <div class="col-4">
+        <a href="#" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background: var(--color-primary-faint); color: var(--color-primary)">
+          <i class="fa-solid fa-calendar-days fa-lg"></i>
+          <span style="font-size: var(--font-size-xs); font-weight: 600">Planning</span>
+        </a>
+      </div>
+      {% endif %}
+      {% if perms_sales %}
+      <div class="col-4">
+        <a href="#" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background: var(--color-primary-faint); color: var(--color-primary)">
+          <i class="fa-solid fa-chart-line fa-lg"></i>
+          <span style="font-size: var(--font-size-xs); font-weight: 600">CA</span>
+        </a>
+      </div>
+      {% endif %}
+      <div class="col-4">
+        <a href="{% url 'logout' %}" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background: var(--color-danger-bg); color: var(--color-danger)">
+          <i class="fa-solid fa-right-from-bracket fa-lg"></i>
+          <span style="font-size: var(--font-size-xs); font-weight: 600">Déconnexion</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Scripts ────────────────────────────────────────────── -->
+<script src="/static/vendors/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/static/vendors/alpinejs/alpine.min.js" defer></script>
+<script src="/static/vendors/htmx/htmx.min.js"></script>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

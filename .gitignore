@@ -1,0 +1,19 @@
+# Environnement
+.env
+.venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+staticfiles/
+media/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
