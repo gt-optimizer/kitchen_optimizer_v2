@@ -424,6 +424,28 @@ class Recipe(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # ── Champs calculés et cachés ─────────────────────────────────────────────
+    cost_total_cached = models.DecimalField(
+        max_digits=10, decimal_places=4, default=0,
+        verbose_name="Coût total (caché)",
+        help_text="Mis à jour automatiquement via signal post_save"
+    )
+    is_vegan_computed = models.BooleanField(
+        default=False, verbose_name="Végan (calculé)"
+    )
+    is_veggie_computed = models.BooleanField(
+        default=False, verbose_name="Végétarien (calculé)"
+    )
+    bio_percent = models.DecimalField(
+        max_digits=5, decimal_places=1, default=0,
+        verbose_name="% ingrédients bio (calculé)"
+    )
+    composition_data = models.JSONField(
+        default=dict, blank=True,
+        verbose_name="Composition complète (JSON)",
+        help_text="Généré automatiquement — liste récursive de tous les ingrédients"
+    )
+
     class Meta:
         verbose_name = "Recette"
         verbose_name_plural = "Recettes"
@@ -431,6 +453,7 @@ class Recipe(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["tenant", "name"], name="unique_recipe_per_tenant")
         ]
+
 
     def __str__(self):
         return self.name
