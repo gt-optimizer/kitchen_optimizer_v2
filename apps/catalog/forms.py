@@ -108,21 +108,33 @@ class RecipeForm(forms.ModelForm):
         fields = [
             "name", "category", "recipe_type",
             "output_quantity", "output_unit", "output_weight_kg",
+            "yield_rate",
             "shelf_life_days", "shelf_life_after_opening_days",
             "is_sellable", "is_active",
             "notes", "photo",
         ]
         widgets = {
-            "name":             forms.TextInput(attrs={"class": "form-control"}),
-            "category":         forms.Select(attrs={"class": "form-select"}),
-            "recipe_type":      forms.Select(attrs={"class": "form-select"}),
-            "output_quantity":  forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
-            "output_unit":      forms.Select(attrs={"class": "form-select"}),
-            "output_weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
-            "shelf_life_days":              forms.NumberInput(attrs={"class": "form-control"}),
-            "shelf_life_after_opening_days": forms.NumberInput(attrs={"class": "form-control"}),
-            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            # ... widgets existants ...
+            "yield_rate": forms.NumberInput(attrs={
+                "class": "form-control", "step": "1",
+                "min": "0", "max": "100", "placeholder": "ex: 90"
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.initial['yield_rate'] = round(float(self.instance.yield_rate) * 100, 1)
+        self.fields['yield_rate'].help_text = "Ex: 90 pour 90% de matière utilisable"
+        self.fields['yield_rate'].required = False
+
+    def clean_yield_rate(self):
+        value = self.cleaned_data.get('yield_rate')
+        if value is None:
+            return 1.0
+        if value > 1:
+            value = value / 100
+        return value
 
 
 class RecipeLineForm(forms.ModelForm):

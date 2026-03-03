@@ -144,6 +144,21 @@
 
   </div>
 </div>
+{# ── Drawer modification ligne ─────────────────────────────────────────────── #}
+<div id="recipe-line-drawer" class="price-drawer">
+  <div class="price-drawer-backdrop"
+       onclick="document.getElementById('recipe-line-drawer').classList.remove('open')"></div>
+  <div class="price-drawer-panel">
+    <div class="price-drawer-header">
+      <span class="fw-bold">Modifier la ligne</span>
+      <button class="btn btn-ghost btn-icon"
+              onclick="document.getElementById('recipe-line-drawer').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="recipe-line-drawer-content"></div>
+  </div>
+</div>
 
 {# CSS autocomplete #}
 <style>

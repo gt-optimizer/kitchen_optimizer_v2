@@ -121,6 +121,11 @@
                   <label class="form-label">DLC après ouverture (jours)</label>
                   {{ form.shelf_life_after_opening_days }}
                 </div>
+                <div class="col-md-4">
+                  <label class="form-label">Rendement (%)</label>
+                  {{ form.yield_rate }}
+                  <div class="form-hint">{{ form.yield_rate.help_text }}</div>
+                </div>
               </div>
             </div>
           </div>

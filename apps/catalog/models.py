@@ -392,6 +392,11 @@ class Recipe(models.Model):
     shelf_life_after_opening_days = models.PositiveSmallIntegerField(
         default=0, verbose_name="DLC après ouverture (jours)"
     )
+    yield_rate = models.DecimalField(
+        max_digits=5, decimal_places=4, default=1,
+        verbose_name="Rendement",
+        help_text="Ex: 0.90 pour 90% de matière utilisable"
+    )
 
     # ── Vente ─────────────────────────────────────────────────────────────────
     is_sellable = models.BooleanField(
@@ -510,11 +515,16 @@ class Recipe(models.Model):
     @property
     def cost_per_unit(self) -> float:
         """
-        Coût par unité produite.
-        Ex: recette produit 12 portions → cost_per_unit = cost_total / 12
+        Coût par unité produite, après rendement.
+        Ex: 200g chocolat → 180g copeaux (yield=0.9)
+        cost_per_unit = cost_total / (output_quantity × yield_rate)
         """
         qty = float(self.output_quantity) or 1
-        return round(self.cost_total / qty, 4)
+        yield_rate = float(self.yield_rate) if self.yield_rate else 1.0
+        effective_qty = qty * yield_rate
+        if effective_qty == 0:
+            return 0.0
+        return round(self.cost_total / effective_qty, 4)
 
     @property
     def current_selling_price(self) -> dict | None:
@@ -684,24 +694,25 @@ class RecipeLine(models.Model):
 
     @property
     def line_cost(self) -> float:
-        """
-        Coût de la ligne = quantité (convertie en use_unit) × coût par use_unit.
-        """
         from apps.catalog.services.unit_converter import convert_to_use_unit
 
         if self.ingredient:
             cost_per_use = self.ingredient.cost_per_use_unit
             if not cost_per_use:
                 return 0.0
-            # Conversion si l'unité de la ligne ≠ use_unit de l'ingrédient
             qty = convert_to_use_unit(self.quantity, self.unit, self.ingredient)
             if qty is None:
-                # Conversion impossible — fallback quantité brute
                 qty = self.quantity
             return float(qty) * float(cost_per_use)
 
+
         elif self.sub_recipe:
-            return float(self.quantity) * float(self.sub_recipe.cost_per_unit)
+            from apps.catalog.services.unit_converter import convert_units
+            output_unit = self.sub_recipe.output_unit
+            qty = convert_units(self.quantity, self.unit, output_unit)
+            if qty is None:
+                qty = self.quantity
+            return float(qty) * float(self.sub_recipe.cost_per_unit)
 
         return 0.0
 

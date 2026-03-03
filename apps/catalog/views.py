@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.company.mixins import get_current_company
@@ -362,22 +363,39 @@ def recipe_line_add_htmx(request, pk):
 
 
 @login_required
-def recipe_line_delete_htmx(request, line_pk):
-    """HTMX — supprime une ligne et retourne le tableau mis à jour."""
-    line   = get_object_or_404(RecipeLine, pk=line_pk)
+def recipe_line_edit_htmx(request, line_pk):
+    line = get_object_or_404(RecipeLine, pk=line_pk)
     recipe = line.recipe
+
     if request.method == "POST":
-        line.delete()
+        form = RecipeLineForm(request.POST, instance=line)
+        if form.is_valid():
+            form.save()
+            recipe.refresh_from_db()
+            lines = recipe.lines.select_related("ingredient", "sub_recipe").order_by("order")
 
-    lines = recipe.lines.select_related(
-        "ingredient", "sub_recipe"
-    ).order_by("order")
-    recipe.refresh_from_db()
+            drawer_html = render_to_string(
+                "catalog/partials/recipe_line_drawer.html",
+                {"line": line, "recipe": recipe, "form": RecipeLineForm(instance=line), "saved": True},
+                request=request,
+            )
+            lines_html = render_to_string(
+                "catalog/partials/recipe_lines.html",
+                {"recipe": recipe, "lines": lines, "line_form": RecipeLineForm()},
+                request=request,
+            )
+            # OOB swap — met à jour le tableau en même temps que le drawer
+            oob_div = f'<div id="recipe-lines-container" hx-swap-oob="true">{lines_html}</div>'
+            from django.http import HttpResponse
+            return HttpResponse(drawer_html + oob_div)
+    else:
+        form = RecipeLineForm(instance=line)
 
-    return render(request, "catalog/partials/recipe_lines.html", {
+    return render(request, "catalog/partials/recipe_line_drawer.html", {
+        "line": line,
         "recipe": recipe,
-        "lines": lines,
-        "line_form": RecipeLineForm(),
+        "form": form,
+        "saved": False,
     })
 
 
@@ -426,4 +444,20 @@ def ingredient_cost_htmx(request):
 
     return render(request, "catalog/partials/autocomplete_dropdown.html", {
         "results": results
+    })
+
+@login_required
+def recipe_line_delete_htmx(request, line_pk):
+    line = get_object_or_404(RecipeLine, pk=line_pk)
+    recipe = line.recipe
+    if request.method == "POST":
+        line.delete()
+
+    lines = recipe.lines.select_related("ingredient", "sub_recipe").order_by("order")
+    recipe.refresh_from_db()
+
+    return render(request, "catalog/partials/recipe_lines.html", {
+        "recipe": recipe,
+        "lines": lines,
+        "line_form": RecipeLineForm(),
     })

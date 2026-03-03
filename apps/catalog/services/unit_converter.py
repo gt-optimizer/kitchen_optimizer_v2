@@ -173,3 +173,39 @@ def convert_to_use_unit(
 
     # ── Conversion impossible ─────────────────────────────────────────────────
     return None
+
+
+def convert_units(quantity: Decimal, from_unit: str, to_unit: str, density: Decimal = None) -> Decimal | None:
+    """
+    Conversion pure sans ingrédient.
+    density en kg/litre — utilisé pour conversions masse↔volume.
+    """
+    quantity = Decimal(str(quantity))
+
+    if from_unit == to_unit:
+        return quantity
+
+    if from_unit in TO_KG and to_unit in TO_KG:
+        return quantity * TO_KG[from_unit] / TO_KG[to_unit]
+
+    if from_unit in TO_LITRE and to_unit in TO_LITRE:
+        return quantity * TO_LITRE[from_unit] / TO_LITRE[to_unit]
+
+    if from_unit in CULINARY_VOLUMES_ML:
+        d = density or INGREDIENT_DENSITIES["_default"]
+        volume_ml = quantity * CULINARY_VOLUMES_ML[from_unit]
+        if to_unit in TO_KG:
+            kg = volume_ml * d / Decimal("1000")
+            return kg / TO_KG[to_unit]
+        if to_unit in TO_LITRE:
+            return (volume_ml / Decimal("1000")) / TO_LITRE[to_unit]
+
+    if from_unit in TO_KG and to_unit in TO_LITRE and density:
+        kg = quantity * TO_KG[from_unit]
+        return (kg / density) / TO_LITRE[to_unit]
+
+    if from_unit in TO_LITRE and to_unit in TO_KG and density:
+        litres = quantity * TO_LITRE[from_unit]
+        return (litres * density) / TO_KG[to_unit]
+
+    return None

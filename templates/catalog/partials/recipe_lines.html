@@ -27,16 +27,25 @@
         </td>
         <td>{{ line.quantity }}</td>
         <td>{{ line.get_unit_display }}</td>
-        <td class="hide-mobile fw-bold">{{ line.line_cost }} €</td>
+        <td class="hide-mobile fw-bold">{{ line.line_cost|floatformat:4 }} €</td>
         <td class="hide-mobile text-muted">{{ line.notes|default:"—" }}</td>
         <td>
-          <button class="btn btn-danger btn-icon btn-sm"
-              hx-post="{% url 'catalog:recipe_line_delete' line.pk %}"
-              hx-target="#recipe-lines-container"
-              hx-swap="innerHTML"
-              hx-confirm="Supprimer cette ligne ?">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'catalog:recipe_line_edit' line.pk %}"
+                    hx-target="#recipe-line-drawer-content"
+                    hx-swap="innerHTML"
+                    onclick="document.getElementById('recipe-line-drawer').classList.add('open')">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'catalog:recipe_line_delete' line.pk %}"
+                    hx-target="#recipe-lines-container"
+                    hx-swap="innerHTML"
+                    hx-confirm="Supprimer cette ligne ?">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
         </td>
       </tr>
       {% empty %}
@@ -55,10 +64,10 @@
       <div class="card-body py-2 px-4 text-end">
         <div class="form-label">Coût total</div>
         <div class="kpi-value" style="font-size:var(--font-size-2xl)">
-          {{ recipe.cost_total_cached }} €
+          {{ recipe.cost_total_cached|floatformat:4 }} €
         </div>
         <div class="text-muted" style="font-size:var(--font-size-xs)">
-          soit {{ recipe.cost_per_unit }} € / {{ recipe.get_output_unit_display }}
+          soit {{ recipe.cost_per_unit|floatformat:4 }} € / {{ recipe.get_output_unit_display }}
         </div>
       </div>
     </div>

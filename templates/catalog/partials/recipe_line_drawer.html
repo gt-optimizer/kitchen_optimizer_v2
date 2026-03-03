@@ -1,0 +1,48 @@
+<div class="price-drawer-body">
+  {% if saved %}
+  <div class="alert alert-success mb-3">
+    <i class="fa-solid fa-check"></i> Ligne mise à jour.
+  </div>
+  {% endif %}
+
+  <div class="mb-3">
+    <div class="form-label">Ingrédient / Sous-recette</div>
+    <div class="fw-bold">
+      {% if line.ingredient %}
+        <span class="badge badge-muted me-1">Ingrédient</span>
+        {{ line.ingredient.name }}
+      {% else %}
+        <span class="badge badge-info me-1">Sous-recette</span>
+        {{ line.sub_recipe.name }}
+      {% endif %}
+    </div>
+    <div class="form-hint">Pour changer l'ingrédient, supprimez la ligne et recréez-la.</div>
+  </div>
+
+  <form hx-post="{% url 'catalog:recipe_line_edit' line.pk %}"
+        hx-target="#recipe-line-drawer-content"
+        hx-swap="innerHTML">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Quantité *</label>
+      {{ form.quantity }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Unité *</label>
+      {{ form.unit }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Notes</label>
+      {{ form.notes }}
+    </div>
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> Enregistrer
+      </button>
+      <button type="button" class="btn btn-ghost"
+              onclick="document.getElementById('recipe-line-drawer').classList.remove('open')">
+        Fermer
+      </button>
+    </div>
+  </form>
+</div>

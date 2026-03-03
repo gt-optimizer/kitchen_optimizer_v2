@@ -23,4 +23,6 @@ urlpatterns = [
     path("recipes/<int:pk>/lines/add/", views.recipe_line_add_htmx, name="recipe_line_add"),
     path("recipes/lines/<int:line_pk>/delete/", views.recipe_line_delete_htmx, name="recipe_line_delete"),
     path("recipes/ingredient-cost/", views.ingredient_cost_htmx, name="ingredient_cost"),
+    path("recipes/lines/<int:line_pk>/edit/", views.recipe_line_edit_htmx, name="recipe_line_edit"),
+
 ]
