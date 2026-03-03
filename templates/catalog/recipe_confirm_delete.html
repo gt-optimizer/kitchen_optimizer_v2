@@ -1,0 +1,33 @@
+{% extends "base/_base.html" %}
+{% block title %}Supprimer {{ recipe.name }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">Supprimer une recette</h1>
+</div>
+
+<div class="card" style="max-width:500px">
+  <div class="card-body">
+    <div class="alert alert-danger">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Supprimer <strong>{{ recipe.name }}</strong> ?
+      {% if recipe.used_in_lines.exists %}
+      <br><strong>Attention</strong> — cette recette est utilisée comme sous-recette dans d'autres recettes.
+      {% endif %}
+    </div>
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">
+        <i class="fa-solid fa-trash"></i> Confirmer la suppression
+      </button>
+      <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="btn btn-ghost">
+        Annuler
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}

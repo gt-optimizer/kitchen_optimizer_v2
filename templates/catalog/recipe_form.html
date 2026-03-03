@@ -1,0 +1,163 @@
+{% extends "base/_base.html" %}
+{% load static %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'catalog:recipe_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ action }}</h1>
+</div>
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger mb-4">
+    <i class="fa-solid fa-circle-exclamation"></i>
+    {{ form.non_field_errors }}
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-md-8">
+      <div class="accordion" id="recipeAccordion">
+
+        {# 1. Infos générales #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-infos">
+              <i class="fa-solid fa-info-circle me-2 text-primary"></i>
+              Informations générales
+            </button>
+          </h2>
+          <div id="acc-infos" class="accordion-collapse collapse show">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-md-8">
+                  <label class="form-label">Nom *</label>
+                  {{ form.name }}
+                  {% if form.name.errors %}
+                  <div class="text-danger" style="font-size:var(--font-size-xs)">{{ form.name.errors.0 }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Catégorie</label>
+                  {{ form.category }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Type *</label>
+                  {{ form.recipe_type }}
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check mt-4">
+                    {{ form.is_sellable }}
+                    <label class="form-check-label" for="{{ form.is_sellable.id_for_label }}">
+                      <i class="fa-solid fa-tag text-primary"></i> Vendable tel quel
+                    </label>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-check mt-4">
+                    {{ form.is_active }}
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                      <i class="fa-solid fa-circle-check text-success"></i> Active
+                    </label>
+                  </div>
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Notes / conseils</label>
+                  {{ form.notes }}
+                </div>
+                <div class="col-12">
+                  <label class="form-label">Photo</label>
+                  {% if recipe.photo %}
+                  <div class="mb-2">
+                    <img src="{{ recipe.photo.url }}" alt="Photo actuelle"
+                         style="height:60px; border-radius:var(--radius-sm)">
+                  </div>
+                  {% endif %}
+                  {{ form.photo }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# 2. Production #}
+        <div class="accordion-item card mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#acc-prod">
+              <i class="fa-solid fa-industry me-2 text-primary"></i>
+              Production & DLC
+            </button>
+          </h2>
+          <div id="acc-prod" class="accordion-collapse collapse">
+            <div class="accordion-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <label class="form-label">Quantité produite *</label>
+                  {{ form.output_quantity }}
+                  <div class="form-hint">Ex: 12 portions, 1 cadre, 2.5 kg</div>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Unité *</label>
+                  {{ form.output_unit }}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label">Poids total produit (kg)</label>
+                  {{ form.output_weight_kg }}
+                  <div class="form-hint">Après cuisson/assemblage</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">DLC (jours)</label>
+                  {{ form.shelf_life_days }}
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">DLC après ouverture (jours)</label>
+                  {{ form.shelf_life_after_opening_days }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {# Actions #}
+    <div class="col-md-4">
+      <div class="card" style="position:sticky; top: calc(var(--navbar-height) + var(--space-6))">
+        <div class="card-header">
+          <h5 class="card-title"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</h5>
+        </div>
+        <div class="card-body d-flex flex-column gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+          </button>
+          {% if recipe %}
+          <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="btn btn-ghost">
+            <i class="fa-solid fa-eye"></i> Voir la fiche
+          </a>
+          {% endif %}
+          <a href="{% url 'catalog:recipe_list' %}" class="btn btn-ghost">
+            <i class="fa-solid fa-xmark"></i> Annuler
+          </a>
+        </div>
+        {% if recipe %}
+        <div class="card-footer">
+          <div class="text-muted" style="font-size:var(--font-size-xs)">
+            <i class="fa-solid fa-clock me-1"></i>
+            Modifié le {{ recipe.updated_at|date:"d/m/Y à H:i" }}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

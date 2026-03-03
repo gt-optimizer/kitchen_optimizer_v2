@@ -5,8 +5,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.company.mixins import get_current_company
-from .models import Ingredient, IngredientCategory
-from .forms import IngredientForm
+from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory
+from .forms import IngredientForm, RecipeForm, RecipeLineForm
 from apps.pricing.forms import PriceRecordForm
 from apps.pricing.models import PriceRecord
 
@@ -194,4 +194,236 @@ def ingredient_search_htmx(request):
         qs = qs.filter(Q(name__icontains=q) | Q(category__name__icontains=q))
     return render(request, "catalog/partials/ingredient_table.html", {
         "ingredients": qs, "q": q
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RECETTES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def recipe_list(request):
+    qs = Recipe.objects.select_related("category").order_by("name")
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(category__name__icontains=q) |
+            Q(composition_data__icontains=q)
+        )
+
+    category_id = request.GET.get("category")
+    if category_id:
+        qs = qs.filter(category_id=category_id)
+
+    recipe_type = request.GET.get("type")
+    if recipe_type:
+        qs = qs.filter(recipe_type=recipe_type)
+
+    if request.GET.get("sellable"):
+        qs = qs.filter(is_sellable=True)
+
+    if request.GET.get("active"):
+        qs = qs.filter(is_active=True)
+
+    categories = RecipeCategory.objects.all()
+
+    if request.headers.get("HX-Request"):
+        return render(request, "catalog/partials/recipe_table.html", {
+            "recipes": qs, "q": q
+        })
+
+    return render(request, "catalog/recipe_list.html", {
+        "recipes": qs,
+        "categories": categories,
+        "q": q,
+        "category_id": category_id,
+        "recipe_type": recipe_type,
+    })
+
+
+@login_required
+def recipe_create(request):
+    if request.method == "POST":
+        form = RecipeForm(request.POST, request.FILES)
+        if form.is_valid():
+            recipe = form.save(commit=False)
+            recipe.tenant = request.tenant
+            recipe.save()
+            messages.success(request, f"Recette « {recipe.name} » créée.")
+            return redirect("catalog:recipe_detail", pk=recipe.pk)
+    else:
+        form = RecipeForm()
+
+    return render(request, "catalog/recipe_form.html", {
+        "form": form,
+        "action": "Créer une recette",
+    })
+
+
+@login_required
+def recipe_detail(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    lines = recipe.lines.select_related(
+        "ingredient", "sub_recipe"
+    ).order_by("order")
+    line_form = RecipeLineForm()
+    return render(request, "catalog/recipe_detail.html", {
+        "recipe": recipe,
+        "lines": lines,
+        "line_form": line_form,
+    })
+
+
+@login_required
+def recipe_edit(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if request.method == "POST":
+        form = RecipeForm(request.POST, request.FILES, instance=recipe)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Recette « {recipe.name} » mise à jour.")
+            return redirect("catalog:recipe_detail", pk=recipe.pk)
+    else:
+        form = RecipeForm(instance=recipe)
+
+    return render(request, "catalog/recipe_form.html", {
+        "form": form,
+        "recipe": recipe,
+        "action": "Modifier la recette",
+    })
+
+
+@login_required
+def recipe_delete(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if request.method == "POST":
+        name = recipe.name
+        recipe.delete()
+        messages.success(request, f"Recette « {name} » supprimée.")
+        return redirect("catalog:recipe_list")
+    return render(request, "catalog/recipe_confirm_delete.html", {
+        "recipe": recipe
+    })
+
+
+@login_required
+def recipe_search_htmx(request):
+    q = request.GET.get("q", "").strip()
+    qs = Recipe.objects.select_related("category")
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(composition_data__icontains=q)
+        )
+    return render(request, "catalog/partials/recipe_table.html", {
+        "recipes": qs, "q": q
+    })
+
+
+@login_required
+def recipe_line_add_htmx(request, pk):
+    """
+    HTMX — ajoute une ligne à la recette.
+    Retourne le tableau des lignes mis à jour + le coût total.
+    """
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if request.method == "POST":
+        form = RecipeLineForm(request.POST)
+        ingredient_id  = request.POST.get("ingredient_id")
+        sub_recipe_id  = request.POST.get("sub_recipe_id")
+        print("ingredient_id:", ingredient_id, "sub_recipe_id:", sub_recipe_id)
+        print("form valid:", form.is_valid())
+        print("form errors:", form.errors)
+
+        if form.is_valid() and (ingredient_id or sub_recipe_id):
+            line = form.save(commit=False)
+            line.recipe = recipe
+            line.order  = recipe.lines.count() + 1
+
+            if ingredient_id:
+                line.ingredient = get_object_or_404(Ingredient, pk=ingredient_id)
+            elif sub_recipe_id:
+                line.sub_recipe = get_object_or_404(Recipe, pk=sub_recipe_id)
+
+            line.save()
+
+    lines = recipe.lines.select_related(
+        "ingredient", "sub_recipe"
+    ).order_by("order")
+    recipe.refresh_from_db()
+
+    return render(request, "catalog/partials/recipe_lines.html", {
+        "recipe": recipe,
+        "lines": lines,
+        "line_form": RecipeLineForm(),
+    })
+
+
+@login_required
+def recipe_line_delete_htmx(request, line_pk):
+    """HTMX — supprime une ligne et retourne le tableau mis à jour."""
+    line   = get_object_or_404(RecipeLine, pk=line_pk)
+    recipe = line.recipe
+    if request.method == "POST":
+        line.delete()
+
+    lines = recipe.lines.select_related(
+        "ingredient", "sub_recipe"
+    ).order_by("order")
+    recipe.refresh_from_db()
+
+    return render(request, "catalog/partials/recipe_lines.html", {
+        "recipe": recipe,
+        "lines": lines,
+        "line_form": RecipeLineForm(),
+    })
+
+
+@login_required
+def ingredient_cost_htmx(request):
+    """
+    HTMX — autocomplete unifié ingrédients + sous-recettes.
+    Retourne un dropdown HTML.
+    """
+    q = request.GET.get("q", "").strip()
+    print("q=", q, "exclude_pk=", request.GET.get("exclude_pk"))
+    if len(q) < 2:
+        return render(request, "catalog/partials/autocomplete_dropdown.html", {
+            "results": []
+        })
+
+    ingredients = Ingredient.objects.filter(
+        name__icontains=q, is_active=True
+    )[:8]
+    print("ingredients trouvés:", list(ingredients.values_list("name", flat=True)))
+
+
+    sub_recipes = Recipe.objects.filter(
+        name__icontains=q, is_active=True
+    ).exclude(pk=request.GET.get("exclude_pk"))[:8]
+
+    results = []
+    for ing in ingredients:
+        results.append({
+            "id":       ing.pk,
+            "label":    ing.name,
+            "type":     "ingredient",
+            "type_display": "Ingrédient",
+            "cost":     float(ing.cost_per_use_unit),
+            "unit":     ing.get_use_unit_display(),
+        })
+    for sr in sub_recipes:
+        results.append({
+            "id":       sr.pk,
+            "label":    sr.name,
+            "type":     "sub_recipe",
+            "type_display": "Sous-recette",
+            "cost":     sr.cost_per_unit,
+            "unit":     sr.get_output_unit_display(),
+        })
+
+    return render(request, "catalog/partials/autocomplete_dropdown.html", {
+        "results": results
     })

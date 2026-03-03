@@ -1,8 +1,9 @@
 from django import forms
-from .models import Ingredient, IngredientCategory
 from apps.utilities.models import Allergen
 from apps.pricing.models import PriceRecord
 from apps.pricing.forms import PriceRecordForm
+
+from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory
 
 
 class IngredientForm(forms.ModelForm):
@@ -87,3 +88,66 @@ class IngredientForm(forms.ModelForm):
         if value > 1:
             value = value / 100
         return value
+
+    def clean_name(self):
+        name = self.cleaned_data["name"].strip()
+        qs = Ingredient.objects.filter(name__iexact=name)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(
+                f"Un ingrédient nommé « {name} » existe déjà."
+            )
+        return name
+
+
+
+class RecipeForm(forms.ModelForm):
+    class Meta:
+        model = Recipe
+        fields = [
+            "name", "category", "recipe_type",
+            "output_quantity", "output_unit", "output_weight_kg",
+            "shelf_life_days", "shelf_life_after_opening_days",
+            "is_sellable", "is_active",
+            "notes", "photo",
+        ]
+        widgets = {
+            "name":             forms.TextInput(attrs={"class": "form-control"}),
+            "category":         forms.Select(attrs={"class": "form-select"}),
+            "recipe_type":      forms.Select(attrs={"class": "form-select"}),
+            "output_quantity":  forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
+            "output_unit":      forms.Select(attrs={"class": "form-select"}),
+            "output_weight_kg": forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
+            "shelf_life_days":              forms.NumberInput(attrs={"class": "form-control"}),
+            "shelf_life_after_opening_days": forms.NumberInput(attrs={"class": "form-control"}),
+            "notes": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+        }
+
+
+class RecipeLineForm(forms.ModelForm):
+    # Champ unifié pour autocomplete — pas dans le modèle
+    source_label = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Rechercher un ingrédient ou une sous-recette...",
+            "autocomplete": "off",
+        })
+    )
+
+    class Meta:
+        model = RecipeLine
+        fields = ["quantity", "unit", "notes"]
+        widgets = {
+            "quantity": forms.NumberInput(attrs={
+                "class": "form-control",
+                "step": "0.001",
+                "placeholder": "Quantité"
+            }),
+            "unit": forms.Select(attrs={"class": "form-select"}),
+            "notes": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Notes (optionnel)"
+            }),
+        }

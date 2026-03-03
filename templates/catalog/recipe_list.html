@@ -1,0 +1,81 @@
+{% extends "base/_base.html" %}
+{% load static %}
+{% block title %}Recettes — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-book-open"></i> Recettes
+  </h1>
+  <a href="{% url 'catalog:recipe_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Nouvelle recette
+  </a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <input type="text" name="q" value="{{ q }}"
+               placeholder="Rechercher (nom, composition, allergènes...)"
+               class="form-control"
+               hx-get="{% url 'catalog:recipe_search' %}"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#recipe-table"
+               hx-include="[name='category'],[name='type'],[name='sellable'],[name='active']">
+      </div>
+      <div class="col-md-2">
+        <select name="category" class="form-select"
+                hx-get="{% url 'catalog:recipe_search' %}"
+                hx-trigger="change"
+                hx-target="#recipe-table"
+                hx-include="[name='q'],[name='type']">
+          <option value="">Toutes catégories</option>
+          {% for cat in categories %}
+          <option value="{{ cat.pk }}" {% if category_id == cat.pk|stringformat:"s" %}selected{% endif %}>
+            {{ cat.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <select name="type" class="form-select"
+                hx-get="{% url 'catalog:recipe_search' %}"
+                hx-trigger="change"
+                hx-target="#recipe-table"
+                hx-include="[name='q'],[name='category']">
+          <option value="">Tous types</option>
+          <option value="recipe"     {% if recipe_type == "recipe" %}selected{% endif %}>Recette simple</option>
+          <option value="sub_recipe" {% if recipe_type == "sub_recipe" %}selected{% endif %}>Sous-recette</option>
+          <option value="product"    {% if recipe_type == "product" %}selected{% endif %}>Produit fini</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-3">
+        <div class="form-check">
+          <input type="checkbox" name="sellable" id="sellable" class="form-check-input"
+                 hx-get="{% url 'catalog:recipe_search' %}"
+                 hx-trigger="change"
+                 hx-target="#recipe-table"
+                 hx-include="[name='q'],[name='category'],[name='type']">
+          <label for="sellable" class="form-check-label">Vendable</label>
+        </div>
+        <div class="form-check">
+          <input type="checkbox" name="active" id="active" class="form-check-input" checked
+                 hx-get="{% url 'catalog:recipe_search' %}"
+                 hx-trigger="change"
+                 hx-target="#recipe-table"
+                 hx-include="[name='q'],[name='category'],[name='type']">
+          <label for="active" class="form-check-label">Actif</label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div id="recipe-table">
+    {% include "catalog/partials/recipe_table.html" %}
+  </div>
+</div>
+{% endblock %}

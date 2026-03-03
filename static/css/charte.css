@@ -851,3 +851,11 @@ h6, .h6 { font-size: var(--font-size-sm);  font-weight: 600; }
 .price-drawer-panel {
   pointer-events: all;
 }
+
+.card-autocomplete {
+  overflow: visible !important;
+}
+
+.card-autocomplete .card-body {
+  overflow: visible !important;
+}

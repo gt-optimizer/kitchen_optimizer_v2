@@ -607,12 +607,15 @@ class RecipeLine(models.Model):
         ("kg", "kg"),
         ("g", "g"),
         ("litre", "litre"),
+        ("cl", "cl"),
         ("ml", "ml"),
         ("pièce", "pièce"),
         ("portion", "portion"),
-        ("cs", "c. à soupe"),
-        ("cc", "c. à café"),
+        ("cs", "cuillère à soupe"),
+        ("cc", "cuillère à café"),
         ("pincée", "pincée"),
+        ("cadre", "cadre"),
+        ("plaque", "plaque"),
     ]
 
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE, related_name="lines")
@@ -673,25 +676,33 @@ class RecipeLine(models.Model):
         """Message d'erreur lisible si la contrainte XOR est violée."""
         from django.core.exceptions import ValidationError
         if self.ingredient and self.sub_recipe:
-            raise ValidationError("Une ligne ne peut pas avoir à la fois un ingrédient et une sous-recette.")
-        if not self.ingredient and not self.sub_recipe:
-            raise ValidationError("Une ligne doit avoir soit un ingrédient, soit une sous-recette.")
+            raise ValidationError(
+                "Une ligne ne peut pas avoir à la fois un ingrédient et une sous-recette."
+            )
+        # if not self.ingredient and not self.sub_recipe:
+        #     raise ValidationError("Une ligne doit avoir soit un ingrédient, soit une sous-recette.")
 
     @property
     def line_cost(self) -> float:
         """
-        Coût de cette ligne en €.
-        Utilise cost_per_use_unit de l'ingrédient — gère toutes les
-        combinaisons purchase_unit → use_unit avec densité et rendement.
+        Coût de la ligne = quantité (convertie en use_unit) × coût par use_unit.
         """
-        try:
-            qty = float(self.quantity)
-            if self.ingredient:
-                return round(qty * float(self.ingredient.cost_per_use_unit), 4)
-            elif self.sub_recipe:
-                return round(qty * self.sub_recipe.cost_per_unit, 4)
-        except (TypeError, ZeroDivisionError):
-            return 0.0
+        from apps.catalog.services.unit_converter import convert_to_use_unit
+
+        if self.ingredient:
+            cost_per_use = self.ingredient.cost_per_use_unit
+            if not cost_per_use:
+                return 0.0
+            # Conversion si l'unité de la ligne ≠ use_unit de l'ingrédient
+            qty = convert_to_use_unit(self.quantity, self.unit, self.ingredient)
+            if qty is None:
+                # Conversion impossible — fallback quantité brute
+                qty = self.quantity
+            return float(qty) * float(cost_per_use)
+
+        elif self.sub_recipe:
+            return float(self.quantity) * float(self.sub_recipe.cost_per_unit)
+
         return 0.0
 
 

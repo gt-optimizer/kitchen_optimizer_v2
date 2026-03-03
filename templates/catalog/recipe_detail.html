@@ -1,0 +1,199 @@
+{% extends "base/_base.html" %}
+{% load static %}
+{% block title %}{{ recipe.name }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'catalog:recipe_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ recipe.name }}</h1>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'catalog:recipe_edit' recipe.pk %}" class="btn btn-secondary">
+      <i class="fa-solid fa-pen"></i> <span class="hide-mobile">Modifier</span>
+    </a>
+    <a href="{% url 'catalog:recipe_delete' recipe.pk %}" class="btn btn-danger">
+      <i class="fa-solid fa-trash"></i>
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  {# Colonne principale #}
+  <div class="col-md-8">
+
+    {# Lignes de recette #}
+    <div class="card mb-4" style="overflow: visible;">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-list"></i> Composition
+        </h5>
+      </div>
+      <div class="card-body p-0 px-3 pb-3" style="overflow: visible;">
+        <div id="recipe-lines-container">
+          {% include "catalog/partials/recipe_lines.html" %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# Colonne droite #}
+  <div class="col-md-4">
+
+    {# Infos recette #}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-info-circle"></i> Informations
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="form-label">Type</div>
+            <span class="badge {% if recipe.recipe_type == 'product' %}badge-primary{% elif recipe.recipe_type == 'sub_recipe' %}badge-info{% else %}badge-muted{% endif %}">
+              {{ recipe.get_recipe_type_display }}
+            </span>
+          </div>
+          <div class="col-6">
+            <div class="form-label">Catégorie</div>
+            <div>{{ recipe.category.name|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">Production</div>
+            <div>{{ recipe.output_quantity }} {{ recipe.get_output_unit_display }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">DLC</div>
+            <div>{{ recipe.shelf_life_days }} j</div>
+          </div>
+          {% if recipe.is_sellable %}
+          <div class="col-12">
+            <div class="form-label">Prix de vente</div>
+            {% with sp=recipe.current_selling_price %}
+              {% if sp %}
+                <div class="fw-bold text-primary">{{ sp.ttc }} € TTC</div>
+                <div class="text-muted" style="font-size:var(--font-size-xs)">
+                  {{ sp.ht }} € HT — {{ sp.channel }}
+                </div>
+              {% else %}
+                <span class="text-muted">Non renseigné</span>
+              {% endif %}
+            {% endwith %}
+          </div>
+          {% endif %}
+        </div>
+
+        <hr class="divider">
+
+        {# Flags #}
+        <div class="d-flex flex-wrap gap-2">
+          {% if recipe.is_vegan_computed %}
+            <span class="badge badge-success"><i class="fa-solid fa-leaf"></i> Végan</span>
+          {% elif recipe.is_veggie_computed %}
+            <span class="badge badge-success"><i class="fa-solid fa-carrot"></i> Végétarien</span>
+          {% endif %}
+          {% if recipe.bio_percent > 0 %}
+            <span class="badge badge-primary">
+              <i class="fa-solid fa-seedling"></i> {{ recipe.bio_percent }}% bio
+            </span>
+          {% endif %}
+          {% if recipe.is_sellable %}
+            <span class="badge badge-info"><i class="fa-solid fa-tag"></i> Vendable</span>
+          {% endif %}
+          {% if recipe.used_in_lines.exists %}
+            <span class="badge badge-info">
+              <i class="fa-solid fa-sitemap"></i> Sous-recette
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Allergènes calculés #}
+    {% if recipe.composition_data.allergens_bold %}
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-triangle-exclamation"></i> Allergènes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% for a in recipe.composition_data.allergens_bold %}
+            <span class="badge badge-warning">{{ a }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Notes #}
+    {% if recipe.notes %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title"><i class="fa-solid fa-note-sticky"></i> Notes</h5>
+      </div>
+      <div class="card-body">
+        <p class="text-muted mb-0">{{ recipe.notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{# CSS autocomplete #}
+<style>
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0; right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.autocomplete-item {
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid var(--color-border-light);
+}
+.autocomplete-item:hover {
+  background: var(--color-primary-faint);
+}
+</style>
+
+{# JS autocomplete #}
+<script>
+const CURRENT_RECIPE_PK = "{{ recipe.pk }}";
+
+function selectAutocompleteItem(el) {
+  const id    = el.dataset.id;
+  const type  = el.dataset.type;
+  const label = el.dataset.label;
+
+  document.getElementById("autocomplete-input").value = label;
+  document.getElementById("selected-ingredient-id").value = type === "ingredient" ? id : "";
+  document.getElementById("selected-sub-recipe-id").value = type === "sub_recipe"  ? id : "";
+  document.getElementById("autocomplete-results").innerHTML = "";
+}
+
+document.addEventListener("click", function(e) {
+  if (!e.target.closest("#autocomplete-input")) {
+    document.getElementById("autocomplete-results").innerHTML = "";
+  }
+});
+
+document.addEventListener("htmx:afterSwap", function(evt) {
+  console.log("afterSwap target:", evt.detail.target.id);
+});
+</script>
+
+{% endblock %}

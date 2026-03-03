@@ -1,0 +1,104 @@
+<table class="table-atelier">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th class="hide-mobile">Catégorie</th>
+      <th class="hide-mobile">Type</th>
+      <th class="hide-mobile">Coût total</th>
+      <th class="hide-mobile">Prix vente</th>
+      <th class="hide-mobile">Marge</th>
+      <th class="hide-mobile">Portions</th>
+      <th class="hide-mobile">Flags</th>
+      <th class="text-end">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for recipe in recipes %}
+    <tr>
+      <td>
+        <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="fw-bold text-primary text-decoration-none">
+          {{ recipe.name }}
+        </a>
+        {% if recipe.used_in_lines.exists %}
+          <span class="badge badge-info ms-1" title="Utilisée comme sous-recette">
+            <i class="fa-solid fa-sitemap"></i> sous-recette
+          </span>
+        {% endif %}
+        {% if not recipe.is_active %}
+          <span class="badge badge-muted ms-1">Inactif</span>
+        {% endif %}
+      </td>
+      <td class="hide-mobile text-muted">{{ recipe.category.name|default:"—" }}</td>
+      <td class="hide-mobile">
+        <span class="badge {% if recipe.recipe_type == 'product' %}badge-primary{% elif recipe.recipe_type == 'sub_recipe' %}badge-info{% else %}badge-muted{% endif %}">
+          {{ recipe.get_recipe_type_display }}
+        </span>
+      </td>
+      <td class="hide-mobile fw-bold">
+        {% if recipe.cost_total_cached %}
+          {{ recipe.cost_total_cached }} €
+        {% else %}—{% endif %}
+      </td>
+      <td class="hide-mobile">
+        {% with sp=recipe.current_selling_price %}
+          {% if sp %}
+            {{ sp.ttc }} € TTC
+            <div class="text-muted" style="font-size:var(--font-size-xs)">{{ sp.channel }}</div>
+          {% else %}—{% endif %}
+        {% endwith %}
+      </td>
+      <td class="hide-mobile">
+        {% if recipe.margin_rate is not None %}
+          <span class="fw-bold {% if recipe.margin_rate > 60 %}text-success{% elif recipe.margin_rate > 30 %}text-warning{% else %}text-danger{% endif %}">
+            {{ recipe.margin_rate }} %
+          </span>
+        {% else %}—{% endif %}
+      </td>
+      <td class="hide-mobile text-muted">
+        {% if recipe.output_quantity %}
+          {{ recipe.output_quantity }} {{ recipe.get_output_unit_display }}
+        {% else %}—{% endif %}
+      </td>
+      <td class="hide-mobile">
+        <div class="d-flex gap-1 flex-wrap">
+          {% if recipe.is_vegan_computed %}
+            <span class="badge badge-success" title="Végan"><i class="fa-solid fa-leaf"></i></span>
+          {% elif recipe.is_veggie_computed %}
+            <span class="badge badge-success" title="Végétarien"><i class="fa-solid fa-carrot"></i></span>
+          {% endif %}
+          {% if recipe.bio_percent > 0 %}
+            <span class="badge badge-primary" title="% bio">
+              <i class="fa-solid fa-seedling"></i> {{ recipe.bio_percent }}%
+            </span>
+          {% endif %}
+          {% if recipe.is_sellable %}
+            <span class="badge badge-info" title="Vendable"><i class="fa-solid fa-tag"></i></span>
+          {% endif %}
+        </div>
+      </td>
+      <td>
+        <div class="table-actions">
+          <a href="{% url 'catalog:recipe_detail' recipe.pk %}"
+             class="btn btn-ghost btn-icon btn-sm" title="Voir">
+            <i class="fa-solid fa-eye"></i>
+          </a>
+          <a href="{% url 'catalog:recipe_edit' recipe.pk %}"
+             class="btn btn-icon btn-sm" title="Modifier">
+            <i class="fa-solid fa-pen"></i>
+          </a>
+          <a href="{% url 'catalog:recipe_delete' recipe.pk %}"
+             class="btn btn-danger btn-icon btn-sm" title="Supprimer">
+            <i class="fa-solid fa-trash"></i>
+          </a>
+        </div>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="9" class="text-center text-muted py-4">
+        <i class="fa-solid fa-book-open me-2"></i> Aucune recette trouvée.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

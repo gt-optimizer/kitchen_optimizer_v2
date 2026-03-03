@@ -1,0 +1,117 @@
+{# Tableau des lignes + coût total — rechargé par HTMX #}
+<div>
+  <table class="table-atelier mb-3">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Ingrédient / Sous-recette</th>
+        <th>Quantité</th>
+        <th>Unité</th>
+        <th class="hide-mobile">Coût ligne</th>
+        <th class="hide-mobile">Notes</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td class="text-muted">{{ line.order }}</td>
+        <td>
+          {% if line.ingredient %}
+            <span class="badge badge-muted me-1">Ingrédient</span>
+            {{ line.ingredient.name }}
+          {% else %}
+            <span class="badge badge-info me-1">Sous-recette</span>
+            {{ line.sub_recipe.name }}
+          {% endif %}
+        </td>
+        <td>{{ line.quantity }}</td>
+        <td>{{ line.get_unit_display }}</td>
+        <td class="hide-mobile fw-bold">{{ line.line_cost }} €</td>
+        <td class="hide-mobile text-muted">{{ line.notes|default:"—" }}</td>
+        <td>
+          <button class="btn btn-danger btn-icon btn-sm"
+              hx-post="{% url 'catalog:recipe_line_delete' line.pk %}"
+              hx-target="#recipe-lines-container"
+              hx-swap="innerHTML"
+              hx-confirm="Supprimer cette ligne ?">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" class="text-center text-muted py-3">
+          Aucune ligne — ajoutez des ingrédients ci-dessous.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {# Coût total #}
+  <div class="d-flex justify-content-end mb-4">
+    <div class="card" style="min-width:200px">
+      <div class="card-body py-2 px-4 text-end">
+        <div class="form-label">Coût total</div>
+        <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+          {{ recipe.cost_total_cached }} €
+        </div>
+        <div class="text-muted" style="font-size:var(--font-size-xs)">
+          soit {{ recipe.cost_per_unit }} € / {{ recipe.get_output_unit_display }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Formulaire ajout ligne #}
+  <div class="card" style="overflow: visible;">
+    <div class="card-header">
+      <h5 class="card-title">
+        <i class="fa-solid fa-plus"></i> Ajouter une ligne
+      </h5>
+    </div>
+    <div class="card-body" style="overflow: visible;">
+      <form hx-post="{% url 'catalog:recipe_line_add' recipe.pk %}"
+            hx-target="#recipe-lines-container"
+            hx-swap="innerHTML">
+        {% csrf_token %}
+        <input type="hidden" name="ingredient_id" id="selected-ingredient-id">
+        <input type="hidden" name="sub_recipe_id" id="selected-sub-recipe-id">
+
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4" style="position:relative">
+            <label class="form-label">Ingrédient ou sous-recette *</label>
+            <input type="text" id="autocomplete-input"
+               class="form-control"
+               placeholder="Taper pour rechercher..."
+               autocomplete="off"
+               hx-get="{% url 'catalog:ingredient_cost' %}"
+               hx-trigger="input delay:200ms"
+               hx-target="#autocomplete-results"
+               hx-vals='{"exclude_pk": "{{ recipe.pk }}"}'
+               name="q">
+            <div id="autocomplete-results"></div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Quantité *</label>
+            {{ line_form.quantity }}
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Unité *</label>
+            {{ line_form.unit }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Notes</label>
+            {{ line_form.notes }}
+          </div>
+          <div class="col-md-1">
+            <button type="submit" class="btn btn-primary w-100">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
