@@ -10,6 +10,13 @@
   </a>
   <h1 class="page-title mb-0">{{ recipe.name }}</h1>
   <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'catalog:recipe_pdf' recipe.pk %}"
+       class="btn btn-light" target="_blank">
+      <i class="fa-solid fa-file-pdf"></i> <span class="hide-mobile">Fiche PDF</span>
+    </a>
+    <a href="{% url 'catalog:recipe_duplicate' recipe.pk %}" class="btn btn-light">
+      <i class="fa-solid fa-copy"></i> <span class="hide-mobile">Dupliquer</span>
+    </a>
     <a href="{% url 'catalog:recipe_edit' recipe.pk %}" class="btn btn-secondary">
       <i class="fa-solid fa-pen"></i> <span class="hide-mobile">Modifier</span>
     </a>
@@ -20,43 +27,43 @@
 </div>
 
 <div class="row g-4">
-  {# Colonne principale #}
-  <div class="col-md-8">
+{# Colonne principale #}
+<div class="col-md-8">
 
-    {# Lignes de recette #}
-    <div class="card mb-4" style="overflow: visible;">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-list"></i> Composition
-        </h5>
-      </div>
-      <div class="card-body p-0 px-3 pb-3" style="overflow: visible;">
-        <div id="recipe-lines-container">
-          {% include "catalog/partials/recipe_lines.html" %}
-        </div>
+  {# Lignes de recette #}
+  <div class="card mb-4" style="overflow: visible;">
+    <div class="card-header">
+      <h5 class="card-title">
+        <i class="fa-solid fa-list"></i> Composition
+      </h5>
+    </div>
+    <div class="card-body p-0 px-3 pb-3" style="overflow: visible;">
+      <div id="recipe-lines-container">
+        {% include "catalog/partials/recipe_lines.html" %}
       </div>
     </div>
-
-    {# Étapes de fabrication #}
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-list-check"></i> Étapes de fabrication
-          {% if recipe.steps.count %}
-            <span class="badge badge-muted ms-2">
-              {{ recipe.steps.count }} étape{{ recipe.steps.count|pluralize }}
-            </span>
-          {% endif %}
-        </h5>
-      </div>
-      <div class="card-body">
-        <div id="recipe-steps-container">
-            {% include "catalog/partials/recipe_steps.html" with steps=recipe.steps.all step_form=step_form %}
-        </div>
-      </div>
-    </div>
-
   </div>
+
+  {# Étapes de fabrication #}
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="card-title">
+        <i class="fa-solid fa-list-check"></i> Étapes de fabrication
+        {% if recipe.steps.count %}
+          <span class="badge badge-muted ms-2">
+            {{ recipe.steps.count }} étape{{ recipe.steps.count|pluralize }}
+          </span>
+        {% endif %}
+      </h5>
+    </div>
+    <div class="card-body">
+      <div id="recipe-steps-container">
+        {% include "catalog/partials/recipe_steps.html" with steps=steps step_form=step_form %}
+      </div>
+    </div>
+  </div>
+
+</div>
 
   {# Colonne droite #}
   <div class="col-md-4">
@@ -66,6 +73,36 @@
          style="width:100%; max-height:250px; object-fit:cover; border-radius:var(--radius-lg)">
   </div>
   {% endif %}
+
+    {# Coût de revient + Prix de vente + Marge #}
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title">
+      <i class="fa-solid fa-euro-sign"></i> Économie
+    </h5>
+  </div>
+  <div class="card-body">
+
+    {# Coût de revient #}
+      <div class="mb-3">
+        <div class="form-label">Coût de revient</div>
+        <div class="kpi-value" style="font-size:var(--font-size-xl)">
+          {{ recipe.cost_total_cached|floatformat:4 }} €
+        </div>
+        <div class="text-muted" style="font-size:var(--font-size-xs)">
+          soit {{ recipe.cost_per_unit|floatformat:4 }} € / {{ recipe.get_output_unit_display }}
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      {# Prix de vente #}
+      <div id="recipe-price-tab-content">
+        {% include "catalog/partials/recipe_price_tab.html" with current=current_price %}
+      </div>
+
+    </div>
+  </div>
 
     {# Infos recette #}
     <div class="card mb-4">
@@ -210,6 +247,8 @@
     {% endif %}
     {% endwith %}
 
+
+
     {# Notes #}
     {% if recipe.notes %}
     <div class="card">
@@ -253,6 +292,22 @@
       </button>
     </div>
     <div id="recipe-step-drawer-content"></div>
+  </div>
+</div>
+
+{# ── Drawer prix recette ──────────────────────────────────────────────────── #}
+<div id="recipe-price-drawer" class="price-drawer">
+  <div class="price-drawer-backdrop"
+       onclick="document.getElementById('recipe-price-drawer').classList.remove('open')"></div>
+  <div class="price-drawer-panel">
+    <div class="price-drawer-header">
+      <span class="fw-bold">Prix de vente</span>
+      <button class="btn btn-ghost btn-icon"
+              onclick="document.getElementById('recipe-price-drawer').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="recipe-price-drawer-content"></div>
   </div>
 </div>
 

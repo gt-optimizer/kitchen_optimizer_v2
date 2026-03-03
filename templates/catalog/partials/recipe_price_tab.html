@@ -1,0 +1,48 @@
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-1">
+    <div class="form-label mb-0">Prix de vente</div>
+    <button class="btn btn-ghost btn-icon btn-sm"
+            hx-get="{% url 'pricing:recipe_price_drawer' recipe.pk %}"
+            hx-target="#recipe-price-drawer-content"
+            hx-swap="innerHTML"
+            onclick="document.getElementById('recipe-price-drawer').classList.add('open')"
+            title="Historique / modifier">
+      <i class="fa-solid fa-pen"></i>
+    </button>
+  </div>
+
+  {% if current %}
+    <div class="kpi-value" style="font-size:var(--font-size-xl)">
+      {{ current.price_ttc }} € TTC
+    </div>
+    <div class="text-muted" style="font-size:var(--font-size-xs)">
+      {{ current.price_ht }} € HT — {{ current.get_channel_display }}
+    </div>
+  {% else %}
+    <div class="text-muted" style="font-size:var(--font-size-sm)">
+      Non renseigné
+    </div>
+    <button class="btn btn-primary btn-sm mt-2"
+            hx-get="{% url 'pricing:recipe_price_add' recipe.pk %}"
+            hx-target="#recipe-price-drawer-content"
+            hx-swap="innerHTML"
+            onclick="document.getElementById('recipe-price-drawer').classList.add('open')">
+      <i class="fa-solid fa-plus"></i> Ajouter un prix
+    </button>
+  {% endif %}
+</div>
+
+{# Marge — uniquement si prix de vente renseigné #}
+{% if current and recipe.margin_rate is not None %}
+<hr class="divider">
+<div class="mb-2">
+  <div class="form-label">Marge brute</div>
+  <div class="fw-bold {% if recipe.margin_rate > 50 %}text-success{% elif recipe.margin_rate > 30 %}text-warning{% else %}text-danger{% endif %}"
+       style="font-size:var(--font-size-xl)">
+    {{ recipe.margin_rate }}%
+  </div>
+  <div class="text-muted" style="font-size:var(--font-size-xs)">
+    {{ recipe.margin|floatformat:2 }} € / {{ recipe.get_output_unit_display }}
+  </div>
+</div>
+{% endif %}

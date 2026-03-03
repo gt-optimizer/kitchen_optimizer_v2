@@ -1,10 +1,12 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone
+import weasyprint
+
 
 from apps.company.mixins import get_current_company
 from apps.ciqual.models import CiqualIngredient, TenantCiqualMapping
@@ -388,14 +390,28 @@ def recipe_detail(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
     lines = recipe.lines.select_related("ingredient", "sub_recipe").order_by("order")
     steps = recipe.steps.order_by("order")
-    line_form = RecipeLineForm()
-    step_form = RecipeStepForm()
+
+    today = timezone.localdate()
+    current_price = (
+        PriceRecord.objects
+        .filter(
+            recipe=recipe,
+            channel__in=("retail", "wholesale"),
+            valid_from__lte=today,
+        )
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .select_related("vat_rate")
+        .order_by("-valid_from")
+        .first()
+    )
+
     return render(request, "catalog/recipe_detail.html", {
         "recipe": recipe,
         "lines": lines,
         "steps": steps,
-        "line_form": line_form,
-        "step_form": step_form,
+        "line_form": RecipeLineForm(),
+        "step_form": RecipeStepForm(),
+        "current_price": current_price,
     })
 
 
@@ -681,4 +697,71 @@ def recipe_step_edit_htmx(request, step_pk):
         "recipe": recipe,
         "form": form,
         "saved": False,
+    })
+
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+import weasyprint
+
+
+@login_required
+def recipe_pdf(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    lines = recipe.lines.select_related("ingredient", "sub_recipe").order_by("order")
+    steps = recipe.steps.order_by("order")
+
+    html = render_to_string("catalog/recipe_pdf.html", {
+        "recipe": recipe,
+        "lines": lines,
+        "steps": steps,
+        "company": request.tenant,
+        "date": timezone.localdate(),
+        "request": request,
+    })
+
+    pdf = weasyprint.HTML(
+        string=html,
+        base_url=request.build_absolute_uri("/")
+    ).write_pdf()
+
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response["Content-Disposition"] = (
+        f'inline; filename="fiche_{recipe.name.replace(" ", "_")}.pdf"'
+    )
+    return response
+
+
+@login_required
+def recipe_duplicate(request, pk):
+    original = get_object_or_404(Recipe, pk=pk)
+
+    if request.method == "POST":
+        # Duplique la recette
+        new_recipe = Recipe.objects.get(pk=pk)
+        new_recipe.pk = None
+        new_recipe.name = f"{original.name} (copie)"
+        new_recipe.cost_total_cached = 0
+        new_recipe.composition_data = {}
+        new_recipe.save()
+
+        # Duplique les lignes
+        for line in original.lines.select_related("ingredient", "sub_recipe").order_by("order"):
+            line.pk = None
+            line.recipe = new_recipe
+            line.save()
+
+        # Duplique les étapes
+        for step in original.steps.order_by("order"):
+            old_photo = step.photo
+            step.pk = None
+            step.recipe = new_recipe
+            step.photo = old_photo  # garde la même photo (pas de copie physique)
+            step.save()
+
+        messages.success(request, f"Recette « {new_recipe.name} » créée — modifiez-la selon vos besoins.")
+        return redirect("catalog:recipe_detail", pk=new_recipe.pk)
+
+    return render(request, "catalog/recipe_confirm_duplicate.html", {
+        "recipe": original,
     })

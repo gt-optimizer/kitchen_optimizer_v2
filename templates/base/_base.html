@@ -33,7 +33,7 @@
       </a>
       {% endif %}
       {% if perms_purchasing %}
-      <a href="#" class="atelier-nav-link {% block nav_purchasing %}{% endblock %}">
+      <a href="{% url 'purchasing:document_list' %}" class="atelier-nav-link {% block nav_purchasing %}{% endblock %}">
         <i class="fa-solid fa-truck"></i> Achats
       </a>
       {% endif %}

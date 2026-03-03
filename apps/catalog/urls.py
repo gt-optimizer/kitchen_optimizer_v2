@@ -23,6 +23,8 @@ urlpatterns = [
     path("recipes/<int:pk>/", views.recipe_detail, name="recipe_detail"),
     path("recipes/<int:pk>/edit/", views.recipe_edit, name="recipe_edit"),
     path("recipes/<int:pk>/delete/", views.recipe_delete, name="recipe_delete"),
+    path("recipes/<int:pk>/pdf/", views.recipe_pdf, name="recipe_pdf"),
+    path("recipes/<int:pk>/duplicate/", views.recipe_duplicate, name="recipe_duplicate"),
     # HTMX recettes
     path("recipes/search/", views.recipe_search_htmx, name="recipe_search"),
     path("recipes/<int:pk>/lines/add/", views.recipe_line_add_htmx, name="recipe_line_add"),
@@ -35,5 +37,7 @@ urlpatterns = [
     path("recipes/steps/<int:step_pk>/edit/", views.recipe_step_edit_htmx, name="recipe_step_edit"),
     path("recipes/steps/<int:step_pk>/delete/", views.recipe_step_delete_htmx, name="recipe_step_delete"),
     path("recipes/steps/<int:step_pk>/move/", views.recipe_step_move_htmx, name="recipe_step_move"),
+
+
 
 ]

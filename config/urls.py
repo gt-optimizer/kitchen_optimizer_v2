@@ -9,7 +9,7 @@ urlpatterns = [
     path("", include("apps.welcome.urls")),
     path("dashboard/", include("apps.company.urls")),
     path("catalog/", include("apps.catalog.urls", namespace="catalog")),
-    path("purchasing/", include("apps.purchasing.urls")),
+    path("purchasing/", include("apps.purchasing.urls", namespace="purchasing")),
     path("stock/", include("apps.stock.urls")),
     path("production/", include("apps.production.urls")),
     path("planning/", include("apps.planning.urls")),

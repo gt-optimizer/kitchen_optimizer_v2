@@ -1,0 +1,33 @@
+{% extends "base/_base.html" %}
+{% block title %}Dupliquer {{ recipe.name }} — L'Atelier{% endblock %}
+{% block nav_catalog %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">Dupliquer une recette</h1>
+</div>
+
+<div class="card" style="max-width:500px">
+  <div class="card-body">
+    <div class="alert alert-info mb-4">
+      <i class="fa-solid fa-copy"></i>
+      Vous allez dupliquer <strong>{{ recipe.name }}</strong> avec toutes ses lignes et étapes.
+      La copie s'appellera <strong>{{ recipe.name }} (copie)</strong> — vous pourrez la renommer ensuite.
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-copy"></i> Dupliquer
+        </button>
+        <a href="{% url 'catalog:recipe_detail' recipe.pk %}" class="btn btn-ghost">
+          Annuler
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

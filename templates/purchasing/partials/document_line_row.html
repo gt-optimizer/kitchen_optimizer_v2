@@ -1,0 +1,118 @@
+<tr id="line-{{ line.pk }}"
+    style="{% if line.match_confirmed %}background:var(--color-success-bg){% elif line.line_type != 'product' %}background:var(--color-warning-bg){% endif %}">
+
+  <td style="font-size:var(--font-size-xs); max-width:200px; word-break:break-word">
+    {{ line.raw_label|truncatechars:80 }}
+  </td>
+
+  <td>
+    {% if line.line_type == "product" %}
+      <span class="badge badge-primary">Produit</span>
+    {% elif line.line_type == "sector_tax" %}
+      <span class="badge badge-warning">{{ line.tax_code|default:"Taxe" }}</span>
+    {% elif line.line_type == "discount" %}
+      <span class="badge badge-info">Remise</span>
+    {% elif line.line_type == "shipping" %}
+      <span class="badge badge-muted">Port</span>
+    {% else %}
+      <span class="badge badge-muted">Autre</span>
+    {% endif %}
+  </td>
+
+  <td>{{ line.quantity|default:"—" }} {{ line.unit }}</td>
+  <td>{% if line.unit_price_ht %}{{ line.unit_price_ht }} €{% else %}—{% endif %}</td>
+  <td>{% if line.total_ht %}{{ line.total_ht }} €{% else %}—{% endif %}</td>
+
+  {# ── Ingrédient associé ── #}
+  <td style="font-size:var(--font-size-xs); min-width:180px">
+    {% if line.line_type == "product" and doc.status == "parsed" %}
+
+      {% if line.match_score and line.match_score >= 85 %}
+        {# Score fiable — affiche le nom + badge vert #}
+        <span class="text-success fw-bold">{{ line.matched_ingredient.name }}</span>
+        <span class="badge badge-success ms-1">{{ line.match_score|floatformat:0 }}%</span>
+
+      {% elif line.matched_ingredient and line.match_score %}
+        {# Score faible — affiche le match + warning + select correction #}
+        <div class="mb-1">
+          <span class="text-warning fw-bold">{{ line.matched_ingredient.name }}</span>
+          <span class="badge badge-warning ms-1">{{ line.match_score|floatformat:0 }}%</span>
+        </div>
+        <form hx-post="{% url 'purchasing:document_line_match' doc.pk line.pk %}"
+              hx-target="#line-{{ line.pk }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <div class="d-flex gap-1">
+            <select name="ingredient_pk" class="form-select"
+                    style="font-size:var(--font-size-xs); padding:2px 4px; height:auto">
+              <option value="">— Choisir —</option>
+              {% for ing in ingredients %}
+                <option value="{{ ing.pk }}"
+                  {% if line.matched_ingredient.pk == ing.pk %}selected{% endif %}>
+                  {{ ing.name }}
+                </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap">
+              <i class="fa-solid fa-check"></i>
+            </button>
+          </div>
+        </form>
+
+      {% else %}
+        {# Pas de match — select pour association manuelle #}
+        <form hx-post="{% url 'purchasing:document_line_match' doc.pk line.pk %}"
+              hx-target="#line-{{ line.pk }}"
+              hx-swap="outerHTML">
+          {% csrf_token %}
+          <div class="d-flex gap-1">
+            <select name="ingredient_pk" class="form-select"
+                    style="font-size:var(--font-size-xs); padding:2px 4px; height:auto">
+              <option value="">— Non associé —</option>
+              {% for ing in ingredients %}
+                <option value="{{ ing.pk }}">{{ ing.name }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="fa-solid fa-link"></i>
+            </button>
+          </div>
+        </form>
+      {% endif %}
+
+    {% else %}
+      {# Document validé ou ligne non-produit #}
+      {% if line.matched_ingredient %}
+        <span class="fw-bold">{{ line.matched_ingredient.name }}</span>
+        {% if line.match_score %}
+          <span class="badge badge-muted ms-1">{{ line.match_score|floatformat:0 }}%</span>
+        {% endif %}
+      {% else %}
+        <span class="text-muted">—</span>
+      {% endif %}
+    {% endif %}
+  </td>
+
+  {# ── Bouton confirmation ── #}
+  {% if doc.status == "parsed" and line.line_type == "product" %}
+  <td>
+    <form hx-post="{% url 'purchasing:document_line_confirm' doc.pk line.pk %}"
+          hx-target="#line-{{ line.pk }}"
+          hx-swap="outerHTML">
+      {% csrf_token %}
+      <button type="submit"
+              class="btn btn-icon btn-sm {% if line.match_confirmed %}btn-primary{% else %}btn-ghost{% endif %}"
+              title="{% if line.match_confirmed %}Confirmé — cliquer pour annuler{% else %}Cliquer pour confirmer{% endif %}">
+        <i class="fa-solid {% if line.match_confirmed %}fa-check{% else %}fa-circle{% endif %}"></i>
+      </button>
+    </form>
+  </td>
+  {% elif doc.status == "validated" and line.applied %}
+  <td>
+    <span class="badge badge-success"><i class="fa-solid fa-check"></i> Appliqué</span>
+  </td>
+  {% else %}
+  <td></td>
+  {% endif %}
+
+</tr>

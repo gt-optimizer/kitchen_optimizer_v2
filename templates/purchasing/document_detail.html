@@ -1,0 +1,150 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ doc }} — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'purchasing:document_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">
+    {{ doc.reference|default:"Document sans référence" }}
+  </h1>
+  <div class="ms-auto d-flex gap-2">
+    {% if doc.status == "pending" or doc.status == "error" %}
+    <form method="post" action="{% url 'purchasing:document_parse' doc.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-magnifying-glass"></i> Lancer l'OCR
+      </button>
+    </form>
+    {% elif doc.status == "parsed" %}
+    <form method="post" action="{% url 'purchasing:document_validate' doc.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> Appliquer les prix confirmés
+      </button>
+    </form>
+    {% elif doc.status == "validated" %}
+    <span class="badge badge-success" style="font-size:var(--font-size-sm); padding: var(--space-2) var(--space-4)">
+      <i class="fa-solid fa-check"></i> Prix appliqués
+    </span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  {# Infos document #}
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title"><i class="fa-solid fa-info-circle"></i> Informations</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          <div class="col-6">
+            <div class="form-label">Fournisseur</div>
+            <div class="fw-bold">{{ doc.supplier.name|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">Type</div>
+            <div>{{ doc.get_document_type_display }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">Date</div>
+            <div>{{ doc.document_date|date:"d/m/Y"|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div class="form-label">Statut</div>
+            <div>
+              {% if doc.status == "pending" %}
+                <span class="badge badge-muted">En attente</span>
+              {% elif doc.status == "parsing" %}
+                <span class="badge badge-info">OCR en cours</span>
+              {% elif doc.status == "parsed" %}
+                <span class="badge badge-warning">À valider</span>
+              {% elif doc.status == "validated" %}
+                <span class="badge badge-success">Validé</span>
+              {% elif doc.status == "error" %}
+                <span class="badge badge-danger">Erreur OCR</span>
+              {% endif %}
+            </div>
+          </div>
+          {% if doc.ocr_engine %}
+          <div class="col-12">
+            <div class="form-label">Moteur OCR</div>
+            <div class="badge badge-info">{{ doc.ocr_engine }}</div>
+          </div>
+          {% endif %}
+          {% if doc.ocr_raw.error %}
+          <div class="col-12">
+            <div class="alert alert-danger mb-0">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              {{ doc.ocr_raw.error }}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if doc.document %}
+        <hr class="divider">
+        <a href="{{ doc.document.url }}" target="_blank" class="btn btn-light btn-sm w-100">
+          <i class="fa-solid fa-file-pdf"></i> Voir le document original
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# Lignes extraites #}
+  <div class="col-md-8">
+    {% if lines %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-list"></i> Lignes extraites
+          <span class="badge badge-muted ms-2">{{ lines.count }}</span>
+        </h5>
+        {% if doc.status == "parsed" %}
+        <div class="text-muted" style="font-size:var(--font-size-xs)">
+          <i class="fa-solid fa-circle-check text-success"></i> Vert = confirmé
+          <i class="fa-solid fa-circle-xmark text-danger ms-2"></i> Rouge = à vérifier
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        <table class="table-atelier">
+          <thead>
+            <tr>
+              <th>Libellé OCR</th>
+              <th>Type</th>
+              <th>Qté</th>
+              <th>PU HT</th>
+              <th>Total HT</th>
+              <th>Ingrédient associé</th>
+              {% if doc.status == "parsed" %}
+              <th>Confir.</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody id="lines-table">
+            {% for line in lines %}
+            {% include "purchasing/partials/document_line_row.html" with line=line doc=doc %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% elif doc.status == "pending" %}
+    <div class="card">
+      <div class="card-body text-center" style="padding:var(--space-10)">
+        <i class="fa-solid fa-magnifying-glass"
+           style="font-size:2.5rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+        <div class="fw-bold mb-2">Document en attente d'analyse</div>
+        <div class="text-muted mb-4">Cliquez sur "Lancer l'OCR" pour extraire les lignes</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

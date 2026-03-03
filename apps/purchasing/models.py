@@ -201,3 +201,104 @@ class ReceptionLine(models.Model):
                 reference_price=self.invoiced_price
             )
         super().save(*args, **kwargs)
+
+
+class DeliveryDocument(models.Model):
+    """
+    PDF ou image d'un BL/facture uploadé par l'utilisateur.
+    Cycle de vie : upload → OCR → parsing → validation → application prix
+    """
+    STATUS_CHOICES = [
+        ("pending",   "En attente de traitement"),
+        ("parsing",   "OCR en cours..."),
+        ("parsed",    "Analysé — en attente de validation"),
+        ("validated", "Validé — prix appliqués"),
+        ("error",     "Erreur OCR"),
+    ]
+    DOC_TYPE_CHOICES = [
+        ("bl",      "Bon de livraison"),
+        ("invoice", "Facture"),
+        ("other",   "Autre document"),
+    ]
+
+    tenant        = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="delivery_documents")
+    supplier      = models.ForeignKey(Supplier, on_delete=models.SET_NULL, null=True, blank=True, related_name="documents")
+    document      = models.FileField(upload_to="purchasing/documents/", verbose_name="Document")
+    document_type = models.CharField(max_length=10, choices=DOC_TYPE_CHOICES, default="other", verbose_name="Type")
+    document_date = models.DateField(null=True, blank=True, verbose_name="Date du document")
+    reference     = models.CharField(max_length=60, blank=True, verbose_name="N° BL / Facture")
+    status        = models.CharField(max_length=10, choices=STATUS_CHOICES, default="pending")
+    ocr_raw       = models.JSONField(default=dict, blank=True, verbose_name="Résultat OCR brut")
+    ocr_engine    = models.CharField(max_length=20, blank=True, verbose_name="Moteur OCR utilisé")
+    notes         = models.TextField(blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Document de livraison"
+        verbose_name_plural = "Documents de livraison"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.get_document_type_display()} — {self.supplier} — {self.document_date or self.created_at.date()}"
+
+
+class DeliveryLine(models.Model):
+    """
+    Ligne extraite du document par OCR — avant validation.
+    Peut être un produit, une taxe filière, une remise ou des frais de port.
+    """
+    LINE_TYPE_CHOICES = [
+        ("product",    "Produit"),
+        ("sector_tax", "Taxe filière"),
+        ("discount",   "Remise"),
+        ("shipping",   "Frais de port"),
+        ("other",      "Autre"),
+    ]
+
+    # Codes de taxes filière viande connus
+    SECTOR_TAX_CODES = [
+        "CVO", "INAPORC", "INTERBEV", "IP3", "IP3V", "IP5", "RSD", "TEO"
+    ]
+
+    document       = models.ForeignKey(DeliveryDocument, on_delete=models.CASCADE, related_name="lines")
+    line_type      = models.CharField(max_length=12, choices=LINE_TYPE_CHOICES, default="product")
+    order          = models.PositiveSmallIntegerField(default=0)
+
+    # Données extraites par OCR
+    raw_label      = models.CharField(max_length=300, verbose_name="Libellé brut OCR")
+    quantity       = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True)
+    unit           = models.CharField(max_length=20, blank=True)
+    unit_price_ht  = models.DecimalField(max_digits=10, decimal_places=4, null=True, blank=True, verbose_name="PU HT")
+    total_ht       = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Total HT")
+
+    # Matching ingrédient (fuzzy)
+    matched_ingredient = models.ForeignKey(
+        Ingredient, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="delivery_lines",
+        verbose_name="Ingrédient associé"
+    )
+    match_score    = models.FloatField(null=True, blank=True, verbose_name="Score matching (0-100)")
+    match_confirmed = models.BooleanField(default=False, verbose_name="Matching confirmé")
+
+    # Taxes filière
+    tax_code       = models.CharField(max_length=20, blank=True, verbose_name="Code taxe")
+
+    # Après validation
+    applied        = models.BooleanField(default=False, verbose_name="Prix appliqué")
+    reception_line = models.OneToOneField(
+        "ReceptionLine", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="delivery_line"
+    )
+
+    class Meta:
+        verbose_name = "Ligne document"
+        verbose_name_plural = "Lignes document"
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.raw_label} — {self.get_line_type_display()}"
+
+    @property
+    def is_sector_tax(self):
+        return self.line_type == "sector_tax"

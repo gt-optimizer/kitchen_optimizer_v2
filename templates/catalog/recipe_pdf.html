@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+  /* ── Reset & base ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  @page {
+    size: A4 portrait;
+    margin: 15mm 15mm 20mm 15mm;
+    @bottom-center {
+      content: "{{ company.name }} — Fiche technique — Page " counter(page) " / " counter(pages);
+      font-size: 8pt;
+      color: #7a9b7e;
+    }
+  }
+
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9pt;
+    color: #1a2e1c;
+    line-height: 1.4;
+  }
+
+  /* ── Couleurs ── */
+  :root {
+    --green:       #458651;
+    --green-light: #97b879;
+    --green-xlight:#e8f2e9;
+    --green-faint: #f4f9f4;
+    --border:      #e2ebe3;
+    --muted:       #7a9b7e;
+  }
+
+  /* ── En-tête ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #458651;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .header-title h1 {
+    font-size: 18pt;
+    font-weight: 700;
+    color: #356640;
+    margin-bottom: 2px;
+  }
+
+  .header-title .subtitle {
+    font-size: 8pt;
+    color: #7a9b7e;
+  }
+
+  .header-meta {
+    text-align: right;
+    font-size: 8pt;
+    color: #7a9b7e;
+  }
+
+  .header-meta strong {
+    display: block;
+    font-size: 10pt;
+    color: #1a2e1c;
+  }
+
+  /* ── Grille principale ── */
+  .main-grid {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .col-left  { flex: 2; }
+  .col-right { flex: 1; }
+
+  /* ── Photo ── */
+  .recipe-photo {
+    width: 100%;
+    max-height: 120px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #e2ebe3;
+    margin-bottom: 8px;
+  }
+
+  /* ── Infos recette ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 12px;
+    background: #f4f9f4;
+    border: 1px solid #e2ebe3;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .info-item label {
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #7a9b7e;
+    display: block;
+  }
+
+  .info-item span {
+    font-size: 9pt;
+    font-weight: 600;
+    color: #1a2e1c;
+  }
+
+  /* ── Flags ── */
+  .flags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .flag {
+    background: #e8f2e9;
+    color: #356640;
+    border: 1px solid #97b879;
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 7pt;
+    font-weight: 700;
+  }
+
+  /* ── Coût / marge ── */
+  .cost-box {
+    background: #f4f9f4;
+    border: 1px solid #e2ebe3;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+
+  .cost-box .cost-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 3px;
+    font-size: 8.5pt;
+  }
+
+  .cost-box .cost-row.total {
+    border-top: 1px solid #e2ebe3;
+    padding-top: 4px;
+    font-weight: 700;
+    font-size: 10pt;
+    color: #458651;
+  }
+
+  /* ── Sections ── */
+  .section {
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+  }
+
+  .section-title {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #356640;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid #97b879;
+    padding-bottom: 3px;
+    margin-bottom: 6px;
+  }
+
+  /* ── Tableau ingrédients ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+  }
+
+  thead th {
+    background: #e8f2e9;
+    color: #4a6b4e;
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 6px;
+    text-align: left;
+    border-bottom: 1px solid #97b879;
+  }
+
+  tbody td {
+    padding: 3px 6px;
+    border-bottom: 1px solid #e2ebe3;
+    vertical-align: middle;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) td { background: #f4f9f4; }
+
+  .badge {
+    background: #e8f2e9;
+    color: #356640;
+    border-radius: 10px;
+    padding: 1px 5px;
+    font-size: 6.5pt;
+    font-weight: 700;
+  }
+
+  .badge-info {
+    background: #eaf3fb;
+    color: #2471a3;
+  }
+
+  /* ── Étapes ── */
+  .step {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    page-break-inside: avoid;
+  }
+
+  .step-number {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    background: #458651;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8pt;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .step-content { flex: 1; }
+
+  .step-title {
+    font-weight: 700;
+    font-size: 9pt;
+    color: #1a2e1c;
+    margin-bottom: 2px;
+  }
+
+  .step-desc {
+    font-size: 8.5pt;
+    color: #4a6b4e;
+    margin-bottom: 4px;
+  }
+
+  .step-meta {
+    font-size: 7.5pt;
+    color: #7a9b7e;
+    display: flex;
+    gap: 12px;
+  }
+
+  .step-photo {
+    width: 80px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #e2ebe3;
+    margin-top: 4px;
+  }
+
+  /* ── Valeurs nutri ── */
+  .nutri-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+  }
+
+  .nutri-item {
+    background: #f4f9f4;
+    border: 1px solid #e2ebe3;
+    border-radius: 3px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+
+  .nutri-item label {
+    font-size: 6.5pt;
+    color: #7a9b7e;
+    text-transform: uppercase;
+    display: block;
+  }
+
+  .nutri-item span {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #1a2e1c;
+  }
+
+  /* ── Composition / allergènes ── */
+  .allergens {
+    font-size: 8.5pt;
+    line-height: 1.6;
+  }
+
+  .allergen-bold { font-weight: 700; text-decoration: underline; }
+
+  .composition-text {
+    font-size: 8pt;
+    color: #4a6b4e;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  /* ── Page break ── */
+  .page-break { page-break-after: always; }
+</style>
+</head>
+<body>
+
+{# ── En-tête ─────────────────────────────────────────────────────────────── #}
+<div class="header">
+  <div class="header-title">
+    <h1>{{ recipe.name }}</h1>
+    <div class="subtitle">
+      Fiche technique — {{ recipe.get_recipe_type_display }}
+      {% if recipe.category %} — {{ recipe.category.name }}{% endif %}
+    </div>
+  </div>
+  <div class="header-meta">
+    <strong>{{ company.name }}</strong>
+    Éditée le {{ date|date:"d/m/Y" }}
+  </div>
+</div>
+
+{# ── Grille principale ────────────────────────────────────────────────────── #}
+<div class="main-grid">
+
+  {# Colonne gauche : infos + flags + coût #}
+  <div class="col-left">
+
+    <div class="info-grid">
+      <div class="info-item">
+        <label>Production</label>
+        <span>{{ recipe.output_quantity }} {{ recipe.get_output_unit_display }}</span>
+      </div>
+      <div class="info-item">
+        <label>Rendement</label>
+        <span>{{ recipe.yield_rate_display }}%</span>
+      </div>
+      <div class="info-item">
+        <label>Portions</label>
+        <span>{{ recipe.number_of_servings|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <label>DLC</label>
+        <span>{{ recipe.shelf_life_days }} j{% if recipe.shelf_life_after_opening_days %} / {{ recipe.shelf_life_after_opening_days }} j ouvert{% endif %}</span>
+      </div>
+    </div>
+
+    {# Flags #}
+    {% if recipe.is_vegan_computed or recipe.is_veggie_computed or recipe.bio_percent > 0 %}
+    <div class="flags">
+      {% if recipe.is_vegan_computed %}
+        <span class="flag">🌿 Végan</span>
+      {% elif recipe.is_veggie_computed %}
+        <span class="flag">🥕 Végétarien</span>
+      {% endif %}
+      {% if recipe.bio_percent > 0 %}
+        <span class="flag">🌱 {{ recipe.bio_percent }}% bio</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Coût / marge #}
+    <div class="cost-box">
+      <div class="cost-row">
+        <span>Coût total production</span>
+        <span>{{ recipe.cost_total_cached|floatformat:4 }} €</span>
+      </div>
+      <div class="cost-row">
+        <span>Coût par {{ recipe.get_output_unit_display }}</span>
+        <span>{{ recipe.cost_per_unit|floatformat:4 }} €</span>
+      </div>
+      {% with sp=recipe.current_selling_price %}
+      {% if sp %}
+      <div class="cost-row">
+        <span>Prix de vente HT</span>
+        <span>{{ sp.ht }} €</span>
+      </div>
+      {% if recipe.margin_rate %}
+      <div class="cost-row total">
+        <span>Marge</span>
+        <span>{{ recipe.margin|floatformat:2 }} € ({{ recipe.margin_rate }}%)</span>
+      </div>
+      {% endif %}
+      {% endif %}
+      {% endwith %}
+    </div>
+
+  </div>
+
+  {# Colonne droite : photo #}
+  <div class="col-right">
+    {% if recipe.photo %}
+    <img src="{{ recipe.photo.path }}" alt="{{ recipe.name }}" class="recipe-photo">
+    {% endif %}
+  </div>
+
+</div>
+
+{# ── Ingrédients ──────────────────────────────────────────────────────────── #}
+<div class="section">
+  <div class="section-title">Ingrédients</div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Ingrédient / Sous-recette</th>
+        <th>Quantité</th>
+        <th>Unité</th>
+        <th>Coût</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>{{ line.order }}</td>
+        <td>
+          {% if line.ingredient %}
+            <span class="badge">Ingrédient</span> {{ line.ingredient.name }}
+          {% else %}
+            <span class="badge badge-info">Sous-recette</span> {{ line.sub_recipe.name }}
+          {% endif %}
+        </td>
+        <td>{{ line.quantity|floatformat:3 }}</td>
+        <td>{{ line.get_unit_display }}</td>
+        <td>{{ line.line_cost|floatformat:4 }} €</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ── Étapes ───────────────────────────────────────────────────────────────── #}
+{% if steps %}
+<div class="section">
+  <div class="section-title">Étapes de fabrication</div>
+  {% for step in steps %}
+  <div class="step">
+    <div class="step-number">{{ step.order }}</div>
+    <div class="step-content">
+      <div class="step-title">{{ step.title }}</div>
+      {% if step.description %}
+        <div class="step-desc">{{ step.description }}</div>
+      {% endif %}
+      <div class="step-meta">
+        {% if step.duration_minutes %}
+          ⏱ {{ step.duration_minutes }} min
+        {% endif %}
+        {% if step.temperature_c %}
+          🌡 {{ step.temperature_c }}°C
+        {% endif %}
+      </div>
+      {% if step.photo %}
+        <img src="{{ step.photo.path }}" alt="{{ step.title }}" class="step-photo">
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Valeurs nutritionnelles ──────────────────────────────────────────────── #}
+{% with nutri=recipe.composition_data.nutrition %}
+{% if nutri and nutri.complete %}
+<div class="section">
+  <div class="section-title">Valeurs nutritionnelles — pour 100g</div>
+  <div class="nutri-grid">
+    <div class="nutri-item">
+      <label>Énergie</label>
+      <span>{{ nutri.per_100g.energy_kcal }} kcal</span>
+    </div>
+    <div class="nutri-item">
+      <label>Énergie</label>
+      <span>{{ nutri.per_100g.energy_kj }} kJ</span>
+    </div>
+    <div class="nutri-item">
+      <label>Lipides</label>
+      <span>{{ nutri.per_100g.fat }} g</span>
+    </div>
+    <div class="nutri-item">
+      <label>dont saturés</label>
+      <span>{{ nutri.per_100g.saturates }} g</span>
+    </div>
+    <div class="nutri-item">
+      <label>Glucides</label>
+      <span>{{ nutri.per_100g.carbohydrates }} g</span>
+    </div>
+    <div class="nutri-item">
+      <label>dont sucres</label>
+      <span>{{ nutri.per_100g.sugars }} g</span>
+    </div>
+    <div class="nutri-item">
+      <label>Protéines</label>
+      <span>{{ nutri.per_100g.protein }} g</span>
+    </div>
+    <div class="nutri-item">
+      <label>Sel</label>
+      <span>{{ nutri.per_100g.salt }} g</span>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+{# ── Composition & Allergènes ─────────────────────────────────────────────── #}
+{% with comp=recipe.composition_data %}
+{% if comp.ingredients %}
+<div class="section">
+  <div class="section-title">Composition & Allergènes</div>
+  <div class="allergens">
+    {% for ing_data in comp.ingredients %}
+      {% if ing_data.composition %}
+        {{ ing_data.name }} :
+        {% for word in ing_data.composition.split %}
+          {% with clean=word|lower|cut:","|cut:"." %}
+            {% if clean in comp.allergens_bold %}
+              <strong class="allergen-bold">{{ word }}</strong>
+            {% else %}
+              {{ word }}
+            {% endif %}
+          {% endwith %}
+        {% endfor %} ;
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if comp.allergens_bold %}
+  <div style="margin-top:6px; font-size:8pt;">
+    <strong>Allergènes :</strong>
+    {% for a in comp.allergens_bold %}
+      <strong class="allergen-bold">{{ a }}</strong>{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endwith %}
+
+</body>
+</html>

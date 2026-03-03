@@ -1,0 +1,83 @@
+{% extends "base/_base.html" %}
+{% block title %}Documents — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-file-invoice"></i> BL & Factures
+  </h1>
+  <a href="{% url 'purchasing:document_upload' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Importer un document
+  </a>
+</div>
+
+{% if documents %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-atelier">
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Fournisseur</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in documents %}
+        <tr>
+          <td>
+            <a href="{% url 'purchasing:document_detail' doc.pk %}" class="fw-bold">
+              {{ doc.reference|default:"Sans référence" }}
+            </a>
+            {% if doc.ocr_engine %}
+              <span class="badge badge-muted ms-1">{{ doc.ocr_engine }}</span>
+            {% endif %}
+          </td>
+          <td>{{ doc.supplier.name|default:"—" }}</td>
+          <td>{{ doc.get_document_type_display }}</td>
+          <td>{{ doc.document_date|date:"d/m/Y"|default:"—" }}</td>
+          <td>
+            {% if doc.status == "pending" %}
+              <span class="badge badge-muted">En attente</span>
+            {% elif doc.status == "parsing" %}
+              <span class="badge badge-info">OCR en cours</span>
+            {% elif doc.status == "parsed" %}
+              <span class="badge badge-warning">À valider</span>
+            {% elif doc.status == "validated" %}
+              <span class="badge badge-success">Validé</span>
+            {% elif doc.status == "error" %}
+              <span class="badge badge-danger">Erreur</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="table-actions">
+              <a href="{% url 'purchasing:document_detail' doc.pk %}"
+                 class="btn btn-ghost btn-icon btn-sm">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center" style="padding: var(--space-12)">
+    <i class="fa-solid fa-file-invoice"
+       style="font-size:3rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+    <div class="fw-bold mb-2">Aucun document importé</div>
+    <div class="text-muted mb-4">Importez votre premier BL ou facture pour commencer</div>
+    <a href="{% url 'purchasing:document_upload' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Importer un document
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
