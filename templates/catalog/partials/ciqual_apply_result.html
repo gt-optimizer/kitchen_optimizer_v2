@@ -1,0 +1,58 @@
+{% if detached %}
+<div class="alert alert-info">
+  <i class="fa-solid fa-unlink"></i>
+  Référence CIQUAL supprimée. Les valeurs nutritionnelles sont conservées.
+</div>
+
+{% elif filled %}
+<div class="alert alert-success">
+  <i class="fa-solid fa-check"></i>
+  <strong>{{ ciqual.name_fr }}</strong> appliqué —
+  {{ filled|length }} valeur{{ filled|length|pluralize }} remplie{{ filled|length|pluralize }}.
+</div>
+
+{% else %}
+<div class="alert alert-warning">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  Tous les champs étaient déjà renseignés.
+  <form hx-post="{% url 'catalog:ciqual_apply' ingredient.pk %}"
+        hx-target="#ciqual-apply-result"
+        hx-swap="innerHTML"
+        class="d-inline ms-2">
+    {% csrf_token %}
+    <input type="hidden" name="ciqual_id" value="{{ ciqual.pk }}">
+    <input type="hidden" name="overwrite" value="1">
+    <button type="submit" class="btn btn-warning btn-sm">
+      <i class="fa-solid fa-rotate"></i> Écraser quand même
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{% if ciqual %}
+<div class="row g-2 mt-2" style="font-size:var(--font-size-sm)">
+  <div class="col-6">Énergie</div>
+  <div class="col-6 fw-bold">{{ ciqual.energy_kcal }} kcal / {{ ciqual.energy_kj }} kJ</div>
+  <div class="col-6">Lipides</div><div class="col-6">{{ ciqual.fat }} g</div>
+  <div class="col-6 ps-3 text-muted">dont saturés</div><div class="col-6 text-muted">{{ ciqual.saturates }} g</div>
+  <div class="col-6">Glucides</div><div class="col-6">{{ ciqual.carbohydrates }} g</div>
+  <div class="col-6 ps-3 text-muted">dont sucres</div><div class="col-6 text-muted">{{ ciqual.sugars }} g</div>
+  <div class="col-6">Protéines</div><div class="col-6">{{ ciqual.protein }} g</div>
+  <div class="col-6">Sel</div><div class="col-6">{{ ciqual.salt }} g</div>
+  <div class="col-6">Fibres</div><div class="col-6">{{ ciqual.fiber }} g</div>
+</div>
+
+<div class="d-flex gap-2 mt-3">
+  <form hx-post="{% url 'catalog:ciqual_detach' ingredient.pk %}"
+        hx-target="#ciqual-apply-result"
+        hx-swap="innerHTML">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-ghost btn-sm">
+      <i class="fa-solid fa-unlink"></i> Délier CIQUAL
+    </button>
+  </form>
+  <div class="text-muted" style="font-size:var(--font-size-xs); align-self:center">
+    Pour changer de référence, recherchez un autre aliment ci-dessus.
+  </div>
+</div>
+{% endif %}

@@ -1,0 +1,22 @@
+{% if results %}
+<div class="autocomplete-dropdown">
+  {% for c in results %}
+  <div class="autocomplete-item"
+       data-id="{{ c.pk }}"
+       data-name="{{ c.name_fr }}"
+       data-code="{{ c.ciqual_code }}"
+       onclick="selectCiqualItem(this)">
+    <div class="d-flex justify-content-between align-items-center">
+      <span>{{ c.name_fr }}</span>
+      <span class="text-muted" style="font-size:var(--font-size-xs)">
+        {{ c.ciqual_code }}
+        {% if c.energy_kcal %}· {{ c.energy_kcal }} kcal{% endif %}
+      </span>
+    </div>
+    {% if c.group %}
+    <div class="text-muted" style="font-size:var(--font-size-xs)">{{ c.group }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

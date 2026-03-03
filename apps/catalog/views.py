@@ -1,16 +1,17 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone
 
 from apps.company.mixins import get_current_company
-from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory
-from .forms import IngredientForm, RecipeForm, RecipeLineForm
+from apps.ciqual.models import CiqualIngredient, TenantCiqualMapping
+from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory, RecipeStep
+from .forms import IngredientForm, RecipeForm, RecipeLineForm, RecipeStepForm
 from apps.pricing.forms import PriceRecordForm
 from apps.pricing.models import PriceRecord
-
 
 
 @login_required
@@ -135,7 +136,26 @@ def ingredient_edit(request, pk):
         form = IngredientForm(request.POST, request.FILES, instance=ingredient)
         price_form = PriceRecordForm(request.POST)
         if form.is_valid():
-            form.save()
+            ing = form.save(commit=False)
+
+            nutri_fields = [
+                "energy_kj", "energy_kcal", "fat", "saturates",
+                "carbohydrates", "sugars", "protein", "salt", "fiber"
+            ]
+            # Recharge depuis la base fraîche (pas depuis `ingredient` qui est stale)
+            fresh = Ingredient.objects.get(pk=pk)
+            for field in nutri_fields:
+                post_val = request.POST.get(field, "").strip()
+                if not post_val:
+                    setattr(ing, field, getattr(fresh, field))
+
+            if not ing.ciqual_ref_id:
+                ing.ciqual_ref = fresh.ciqual_ref
+
+            if not request.FILES.get("label_photo"):
+                ing.label_photo = fresh.label_photo
+
+            ing.save()
 
             # Sauvegarde prix uniquement si pas encore de prix
             if not has_price and price_form.is_valid() and price_form.cleaned_data.get("price_ht"):
@@ -197,6 +217,106 @@ def ingredient_search_htmx(request):
         "ingredients": qs, "q": q
     })
 
+from apps.ciqual.models import CiqualIngredient, TenantCiqualMapping
+
+
+@login_required
+def ciqual_search_htmx(request):
+    """Autocomplete CIQUAL — retourne une liste de suggestions."""
+    q = request.GET.get("ciqual_q", request.GET.get("q", "")).strip()
+    print("ciqual q=", repr(q), "ciqual_q=", repr(request.GET.get("ciqual_q", "")))
+
+    if len(q) < 2:
+        return render(request, "catalog/partials/ciqual_dropdown.html", {"results": []})
+
+    # Mappings tenant en premier (apprentissage)
+    mapped_ids = (
+        TenantCiqualMapping.objects
+        .filter(
+            tenant=request.tenant,
+            ingredient_name_lower__icontains=q.lower()
+        )
+        .order_by("-score")
+        .values_list("ciqual_ingredient_id", flat=True)[:5]
+    )
+
+    # Recherche générale
+    qs = CiqualIngredient.objects.filter(
+        Q(name_fr__icontains=q) | Q(name_en__icontains=q)
+    ).order_by("name_fr")[:20]
+
+    # Priorise les mappings tenant
+    mapped = list(CiqualIngredient.objects.filter(pk__in=mapped_ids))
+    others = [c for c in qs if c.pk not in mapped_ids]
+    results = mapped + others
+
+    return render(request, "catalog/partials/ciqual_dropdown.html", {
+        "results": results[:12]
+    })
+
+
+@login_required
+def ciqual_apply_htmx(request, pk):
+    ingredient = get_object_or_404(Ingredient, pk=pk)
+    ciqual_id  = request.POST.get("ciqual_id")
+    overwrite  = request.POST.get("overwrite") == "1"
+    ciqual     = get_object_or_404(CiqualIngredient, pk=ciqual_id)
+    print("ciqual_id:", ciqual_id, "ciqual:", ciqual)
+    nutri = ciqual.to_nutrition_dict()
+    filled = []
+
+    for field, value in nutri.items():
+        if value is not None:
+            current = getattr(ingredient, field, None)
+            if not current or overwrite:
+                setattr(ingredient, field, value)
+                filled.append(field)
+
+    print("filled:", filled)
+    ingredient.ciqual_ref = ciqual
+    ingredient.save(update_fields=filled + ["ciqual_ref"])
+    print("saved OK, energy_kcal now:", ingredient.energy_kcal)
+
+    # Mapping apprentissage
+    name_lower = ingredient.name.lower()
+    mapping, created = TenantCiqualMapping.objects.get_or_create(
+        tenant=request.tenant,
+        ingredient_name_lower=name_lower,
+        ciqual_ingredient=ciqual,
+    )
+    if not created:
+        mapping.score += 1
+        mapping.save(update_fields=["score", "last_used"])
+
+    return render(request, "catalog/partials/ciqual_apply_result.html", {
+        "ingredient": ingredient,
+        "ciqual": ciqual,
+        "filled": filled,
+        "overwrite": overwrite,
+        "detached": False,
+    })
+
+@login_required
+def ciqual_preview_htmx(request):
+    """Retourne les valeurs nutri CIQUAL en JSON — pour pré-remplir le formulaire de création."""
+    ciqual_id = request.GET.get("ciqual_id")
+    ciqual = get_object_or_404(CiqualIngredient, pk=ciqual_id)
+    return JsonResponse(ciqual.to_nutrition_dict())
+
+
+@login_required
+def ciqual_detach_htmx(request, pk):
+    """Délie la référence CIQUAL sans toucher aux valeurs nutri."""
+    ingredient = get_object_or_404(Ingredient, pk=pk)
+    if request.method == "POST":
+        ingredient.ciqual_ref = None
+        ingredient.save(update_fields=["ciqual_ref"])
+    return render(request, "catalog/partials/ciqual_apply_result.html", {
+        "ingredient": ingredient,
+        "ciqual": None,
+        "filled": [],
+        "detached": True,
+    })
 
 # ══════════════════════════════════════════════════════════════════════════════
 # RECETTES
@@ -266,14 +386,16 @@ def recipe_create(request):
 @login_required
 def recipe_detail(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
-    lines = recipe.lines.select_related(
-        "ingredient", "sub_recipe"
-    ).order_by("order")
+    lines = recipe.lines.select_related("ingredient", "sub_recipe").order_by("order")
+    steps = recipe.steps.order_by("order")
     line_form = RecipeLineForm()
+    step_form = RecipeStepForm()
     return render(request, "catalog/recipe_detail.html", {
         "recipe": recipe,
         "lines": lines,
+        "steps": steps,
         "line_form": line_form,
+        "step_form": step_form,
     })
 
 
@@ -282,8 +404,15 @@ def recipe_edit(request, pk):
     recipe = get_object_or_404(Recipe, pk=pk)
     if request.method == "POST":
         form = RecipeForm(request.POST, request.FILES, instance=recipe)
+        print("FORM VALID:", form.is_valid())
+        print("FORM ERRORS:", form.errors)
         if form.is_valid():
-            form.save()
+            recipe = form.save(commit=False)
+            # Si pas de nouvelle photo uploadée, garde l'ancienne
+            if not request.FILES.get('photo'):
+                recipe.photo = Recipe.objects.get(pk=recipe.pk).photo
+            recipe.save()
+            form.save_m2m()
             messages.success(request, f"Recette « {recipe.name} » mise à jour.")
             return redirect("catalog:recipe_detail", pk=recipe.pk)
     else:
@@ -460,4 +589,96 @@ def recipe_line_delete_htmx(request, line_pk):
         "recipe": recipe,
         "lines": lines,
         "line_form": RecipeLineForm(),
+    })
+
+
+def _render_steps(request, recipe):
+    steps = recipe.steps.order_by("order")
+    return render(request, "catalog/partials/recipe_steps.html", {
+        "recipe": recipe,
+        "steps": steps,
+        "step_form": RecipeStepForm(),
+    })
+
+
+@login_required
+def recipe_step_add_htmx(request, pk):
+    recipe = get_object_or_404(Recipe, pk=pk)
+    if request.method == "POST":
+        form = RecipeStepForm(request.POST, request.FILES)
+        if form.is_valid():
+            step = form.save(commit=False)
+            step.recipe = recipe
+            step.order = recipe.steps.count() + 1
+            step.save()
+    return _render_steps(request, recipe)
+
+
+@login_required
+def recipe_step_delete_htmx(request, step_pk):
+    step = get_object_or_404(RecipeStep, pk=step_pk)
+    recipe = step.recipe
+    if request.method == "POST":
+        order = step.order
+        step.delete()
+        # Réordonne les étapes suivantes
+        for s in recipe.steps.filter(order__gt=order).order_by("order"):
+            s.order -= 1
+            s.save(update_fields=["order"])
+    return _render_steps(request, recipe)
+
+
+@login_required
+def recipe_step_move_htmx(request, step_pk):
+    step = get_object_or_404(RecipeStep, pk=step_pk)
+    recipe = step.recipe
+    direction = request.POST.get("direction")  # "up" ou "down"
+
+    if direction == "up" and step.order > 1:
+        other = recipe.steps.filter(order=step.order - 1).first()
+        if other:
+            other.order, step.order = step.order, other.order
+            other.save(update_fields=["order"])
+            step.save(update_fields=["order"])
+
+    elif direction == "down":
+        other = recipe.steps.filter(order=step.order + 1).first()
+        if other:
+            other.order, step.order = step.order, other.order
+            other.save(update_fields=["order"])
+            step.save(update_fields=["order"])
+
+    return _render_steps(request, recipe)
+
+
+@login_required
+def recipe_step_edit_htmx(request, step_pk):
+    step = get_object_or_404(RecipeStep, pk=step_pk)
+    recipe = step.recipe
+
+    if request.method == "POST":
+        form = RecipeStepForm(request.POST, request.FILES, instance=step)
+        if form.is_valid():
+            form.save()
+            steps_html = render_to_string(
+                "catalog/partials/recipe_steps.html",
+                {"recipe": recipe, "steps": recipe.steps.order_by("order"), "step_form": RecipeStepForm()},
+                request=request,
+            )
+            drawer_html = render_to_string(
+                "catalog/partials/recipe_step_drawer.html",
+                {"step": step, "recipe": recipe, "form": RecipeStepForm(instance=step), "saved": True},
+                request=request,
+            )
+            oob = f'<div id="recipe-steps-container" hx-swap-oob="true">{steps_html}</div>'
+            from django.http import HttpResponse
+            return HttpResponse(drawer_html + oob)
+    else:
+        form = RecipeStepForm(instance=step)
+
+    return render(request, "catalog/partials/recipe_step_drawer.html", {
+        "step": step,
+        "recipe": recipe,
+        "form": form,
+        "saved": False,
     })

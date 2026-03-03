@@ -224,8 +224,8 @@
           </div>
         </div>
 
-        {# ═══ 5. Valeurs nutritionnelles (fermé) ══════════════════════════ #}
-        <div class="accordion-item card mb-3">
+        {# ═══ 5. Valeurs nutritionnelles (fermé) ══════════════════════════════════ #}
+        <div class="accordion-item card mb-3" style="overflow:visible">
           <h2 class="accordion-header">
             <button class="accordion-button collapsed" type="button"
                     data-bs-toggle="collapse" data-bs-target="#acc-nutri">
@@ -234,15 +234,53 @@
               <span class="badge badge-muted ms-2" style="font-size:var(--font-size-xs)">pour 100g</span>
             </button>
           </h2>
-          <div id="acc-nutri" class="accordion-collapse collapse"
-               data-bs-parent="#ingredientAccordion">
+          <div id="acc-nutri" class="accordion-collapse collapse">
             <div class="accordion-body">
-              <div class="mb-3">
-                <label class="form-label">Référence CIQUAL</label>
-                {{ form.ciqual_ref }}
-                <div class="form-hint">Lien vers la base ANSES — remplit automatiquement les valeurs ci-dessous</div>
+
+              {# Recherche CIQUAL #}
+              <div class="mb-3" style="position:relative; z-index:200">
+                <label class="form-label">
+                  <i class="fa-solid fa-magnifying-glass"></i> Rechercher dans la base CIQUAL
+                </label>
+                <input type="text"
+                       id="ciqual-search-input"
+                       class="form-control"
+                       placeholder="Ex: chocolat noir, farine de blé..."
+                       autocomplete="off"
+                       hx-get="{% url 'catalog:ciqual_search' %}"
+                       hx-trigger="input delay:300ms"
+                       hx-target="#ciqual-results"
+                       name="ciqual_q">
+                <div id="ciqual-results" style="position:relative; z-index:200"></div>
+                <div class="form-hint">
+                  Sélectionnez un aliment pour remplir automatiquement les valeurs ci-dessous
+                </div>
               </div>
+
+              {# Résultat application CIQUAL #}
+              <div id="ciqual-apply-result"></div>
+
+              {% if ingredient and ingredient.ciqual_ref %}
+              <div class="alert alert-info mb-3 d-flex justify-content-between align-items-center">
+                <span>
+                  <i class="fa-solid fa-link"></i>
+                  Lié à : <strong>{{ ingredient.ciqual_ref.name_fr }}</strong>
+                  ({{ ingredient.ciqual_ref.ciqual_code }})
+                </span>
+                <form hx-post="{% url 'catalog:ciqual_detach' ingredient.pk %}"
+                      hx-target="#ciqual-apply-result"
+                      hx-swap="innerHTML">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-ghost btn-sm">
+                    <i class="fa-solid fa-unlink"></i> Délier
+                  </button>
+                </form>
+              </div>
+              {% endif %}
+
               <hr class="divider">
+
+              {# Champs manuels #}
               <div class="row g-3">
                 <div class="col-6 col-md-3">
                   <label class="form-label">{{ form.energy_kj.label }}</label>
@@ -370,5 +408,58 @@
 
   </div>
 </form>
+
+<style>
+.accordion-item,
+.accordion-collapse,
+.accordion-body {
+  overflow: visible !important;
+}
+</style>
+
+<script>
+function selectCiqualItem(el) {
+  const id   = el.dataset.id;
+  const name = el.dataset.name;
+
+  // Ferme le dropdown
+  document.getElementById("ciqual-results").innerHTML = "";
+  document.getElementById("ciqual-search-input").value = name;
+
+  {% if ingredient %}
+  // Si on édite un ingrédient existant → applique via HTMX POST
+  htmx.ajax("POST", "{% url 'catalog:ciqual_apply' ingredient.pk %}", {
+    target: "#ciqual-apply-result",
+    swap: "innerHTML",
+    values: { ciqual_id: id, csrfmiddlewaretoken: "{{ csrf_token }}" }
+  });
+  {% else %}
+  // Si création → pré-remplit les champs du formulaire via fetch
+  fetch(`/catalog/ingredients/ciqual-preview/?ciqual_id=${id}`)
+    .then(r => r.json())
+    .then(data => {
+      const fields = [
+        "energy_kj", "energy_kcal", "fat", "saturates",
+        "carbohydrates", "sugars", "protein", "salt", "fiber"
+      ];
+      fields.forEach(f => {
+        const el = document.getElementById(`id_${f}`);
+        if (el && !el.value && data[f] !== null) {
+          el.value = data[f];
+        }
+      });
+      document.getElementById("ciqual-apply-result").innerHTML =
+        `<div class="alert alert-success"><i class="fa-solid fa-check"></i> Valeurs CIQUAL pré-remplies — vous pouvez les modifier avant d'enregistrer.</div>`;
+    });
+  {% endif %}
+}
+
+// Ferme dropdown si clic ailleurs
+document.addEventListener("click", function(e) {
+  if (!e.target.closest("#ciqual-search-input")) {
+    document.getElementById("ciqual-results").innerHTML = "";
+  }
+});
+</script>
 
 {% endblock %}

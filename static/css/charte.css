@@ -859,3 +859,10 @@ h6, .h6 { font-size: var(--font-size-sm);  font-weight: 600; }
 .card-autocomplete .card-body {
   overflow: visible !important;
 }
+
+.accordion-item {
+  overflow: visible !important;
+}
+.accordion-collapse.show {
+  overflow: visible !important;
+}

@@ -3,7 +3,8 @@ from apps.utilities.models import Allergen
 from apps.pricing.models import PriceRecord
 from apps.pricing.forms import PriceRecordForm
 
-from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory
+from .models import Ingredient, IngredientCategory, Recipe, RecipeLine, RecipeCategory, RecipeStep
+
 
 
 class IngredientForm(forms.ModelForm):
@@ -123,15 +124,34 @@ class RecipeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['photo'].required = False
+        self.fields['yield_rate'].required = False
         if self.instance and self.instance.pk:
             self.initial['yield_rate'] = round(float(self.instance.yield_rate) * 100, 1)
         self.fields['yield_rate'].help_text = "Ex: 90 pour 90% de matière utilisable"
-        self.fields['yield_rate'].required = False
+
+    yield_rate = forms.DecimalField(
+        required=False,
+        min_value=0,
+        max_value=100,
+        decimal_places=1,
+        widget=forms.NumberInput(attrs={
+            "class": "form-control", "step": "1",
+            "min": "0", "max": "100", "placeholder": "ex: 90"
+        }),
+        help_text="Ex: 90 pour 90% de matière utilisable"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['photo'].required = False
+        if self.instance and self.instance.pk:
+            self.initial['yield_rate'] = round(float(self.instance.yield_rate) * 100, 1)
 
     def clean_yield_rate(self):
         value = self.cleaned_data.get('yield_rate')
         if value is None:
-            return 1.0
+            return 1
         if value > 1:
             value = value / 100
         return value
@@ -162,4 +182,16 @@ class RecipeLineForm(forms.ModelForm):
                 "class": "form-control",
                 "placeholder": "Notes (optionnel)"
             }),
+        }
+
+
+class RecipeStepForm(forms.ModelForm):
+    class Meta:
+        model = RecipeStep
+        fields = ["title", "description", "duration_minutes", "temperature_c", "photo"]
+        widgets = {
+            "title":            forms.TextInput(attrs={"class": "form-control", "placeholder": "Ex: Faire fondre le chocolat"}),
+            "description":      forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+            "duration_minutes": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "temperature_c":    forms.NumberInput(attrs={"class": "form-control", "step": "0.5"}),
         }

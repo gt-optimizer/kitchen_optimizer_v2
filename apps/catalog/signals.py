@@ -111,13 +111,177 @@ def _recompute_recipe(recipe):
         "updated_at": timezone.now().isoformat(),
     }
 
+    # ── Poids total calculé si non renseigné manuellement ────────────────
+    output_weight_kg = float(recipe.output_weight_kg) if recipe.output_weight_kg else None
+
+    if not output_weight_kg:
+        # Calcule depuis les lignes
+        computed_weight = Decimal("0")
+        for line in recipe.lines.select_related("ingredient", "sub_recipe").order_by("order"):
+            if line.ingredient:
+                ing = line.ingredient
+                from apps.catalog.services.unit_converter import convert_to_use_unit, get_density
+                qty_in_use = convert_to_use_unit(line.quantity, line.unit, ing)
+                if qty_in_use is None:
+                    qty_in_use = line.quantity
+                if ing.use_unit == "kg":
+                    computed_weight += Decimal(str(qty_in_use))
+                elif ing.use_unit == "g":
+                    computed_weight += Decimal(str(qty_in_use)) / 1000
+                elif ing.use_unit == "litre":
+                    density = get_density(ing)
+                    computed_weight += Decimal(str(qty_in_use)) * density
+
+            elif line.sub_recipe:
+                sr = line.sub_recipe
+                if sr.output_weight_kg:
+                    # Poids proportionnel à la quantité utilisée
+                    from apps.catalog.services.unit_converter import convert_units
+                    qty = convert_units(
+                        line.quantity, line.unit, sr.output_unit
+                    )
+                    if qty is None:
+                        qty = line.quantity
+                    ratio = Decimal(str(qty)) / Decimal(str(sr.output_quantity))
+                    computed_weight += ratio * Decimal(str(sr.output_weight_kg))
+
+        if computed_weight > 0:
+            yield_rate_val = float(recipe.yield_rate) if recipe.yield_rate else 1.0
+            output_weight_kg = float(computed_weight) * yield_rate_val
+
+    # ── Valeurs nutritionnelles ───────────────────────────────────────────
+    NUTRI_FIELDS = [
+        "energy_kj", "energy_kcal", "fat", "saturates",
+        "carbohydrates", "sugars", "protein", "salt", "fiber",
+    ]
+
+    nutrition_data = {
+        "complete": False,
+        "warning": "Données insuffisantes pour calculer les valeurs nutritionnelles.",
+    }
+
+    from apps.catalog.services.unit_converter import convert_to_use_unit, convert_units, get_density
+
+    def _collect_ingredient_weights(recipe, ratio=Decimal("1"), visited=None):
+        """
+        Descend récursivement dans les lignes d'une recette.
+        Retourne une liste de (ingredient, poids_kg) avec le ratio appliqué.
+        ratio = fraction de la recette utilisée (1 = recette complète)
+        """
+        if visited is None:
+            visited = set()
+        if recipe.pk in visited:
+            return []
+        visited.add(recipe.pk)
+
+        result = []
+        for line in recipe.lines.select_related("ingredient", "sub_recipe").order_by("order"):
+            if line.ingredient:
+                ing = line.ingredient
+                qty_in_use = convert_to_use_unit(line.quantity, line.unit, ing)
+                if qty_in_use is None:
+                    qty_in_use = line.quantity
+                print(f"  {ing.name} | use_unit={ing.use_unit} | qty_in_use={qty_in_use}")
+                if ing.use_unit == "kg":
+                    weight_kg = Decimal(str(qty_in_use))
+                elif ing.use_unit == "g":
+                    weight_kg = Decimal(str(qty_in_use)) / 1000
+                elif ing.use_unit == "litre":
+                    density = get_density(ing)
+                    weight_kg = Decimal(str(qty_in_use)) * density
+                else:
+                    if ing.net_weight_kg and ing.pieces_per_package:
+                        weight_per_piece = (
+                                Decimal(str(ing.net_weight_kg)) /
+                                Decimal(str(ing.pieces_per_package))
+                        )
+                        weight_kg = Decimal(str(qty_in_use)) * weight_per_piece
+                    else:
+                        weight_kg = Decimal("0")
+
+                result.append((ing, weight_kg * ratio))
+                print(f"  -> weight_kg={weight_kg}")
+
+            elif line.sub_recipe:
+                sr = line.sub_recipe
+                if sr.output_quantity and float(sr.output_quantity) > 0:
+                    # Calcule le ratio de la sous-recette utilisée
+                    qty_converted = convert_units(line.quantity, line.unit, sr.output_unit)
+                    if qty_converted is None:
+                        qty_converted = line.quantity
+                    sr_ratio = Decimal(str(qty_converted)) / Decimal(str(sr.output_quantity))
+                    # Applique le rendement de la sous-recette
+                    sr_yield = Decimal(str(sr.yield_rate)) if sr.yield_rate else Decimal("1")
+                    sr_ratio = sr_ratio / sr_yield
+                    result.extend(
+                        _collect_ingredient_weights(sr, ratio * sr_ratio, visited)
+                    )
+
+        return result
+
+    ingredient_weights = _collect_ingredient_weights(recipe)
+    total_weight = sum(w for _, w in ingredient_weights)
+    print(f"total_weight={total_weight}, nb_ingredients={len(ingredient_weights)}")
+    print(f"type total_weight={type(total_weight)}, bool={bool(total_weight > 0)}")
+
+    missing_nutri = []
+    for ing, _ in ingredient_weights:
+        missing = [f for f in NUTRI_FIELDS if getattr(ing, f) is None]
+        print(f"  {ing.name} missing={missing}")
+        if missing:
+            if ing.name not in missing_nutri:
+                missing_nutri.append(ing.name)
+    print(f"missing_nutri={missing_nutri}")
+
+    if total_weight > 0:
+        missing_nutri = []
+        for ing, _ in ingredient_weights:
+            missing = [f for f in NUTRI_FIELDS if getattr(ing, f) is None]
+            if missing:
+                if ing.name not in missing_nutri:
+                    missing_nutri.append(ing.name)
+
+        print(f"AVANT MISSING CHECK: total_weight={total_weight}, missing_nutri={missing_nutri}")
+        if missing_nutri:
+            nutrition_data = {
+                "complete": False,
+                "missing": missing_nutri,
+                "warning": f"Valeurs nutritionnelles incomplètes pour : {', '.join(missing_nutri)}",
+            }
+        else:
+            print("CALCUL NUTRI EN COURS")
+            nutri_per_100g = {}
+            for field in NUTRI_FIELDS:
+                total = Decimal("0")
+                for ing, weight_kg in ingredient_weights:
+                    val = getattr(ing, field) or Decimal("0")
+                    contribution = (weight_kg / total_weight) * Decimal(str(val))
+                    total += contribution
+                nutri_per_100g[field] = round(float(total), 2)
+
+            print(f"nutri_per_100g={nutri_per_100g}")
+            nutrition_data = {
+                "complete": True,
+                "per_100g": nutri_per_100g,
+                "total_weight_kg": round(float(total_weight), 4),
+            }
+            print(f"nutrition_data={nutrition_data}")
+    else:
+        nutrition_data = {
+            "complete": False,
+            "warning": "Impossible de calculer le poids total — vérifiez les unités et poids des ingrédients.",
+        }
+
+
     # ── Une seule requête UPDATE ──────────────────────────────────────────
+    composition_data["nutrition"] = nutrition_data
+
     Recipe.objects.filter(pk=recipe.pk).update(
-        cost_total_cached  = round(Decimal(str(cost)), 4),
-        is_vegan_computed  = is_vegan,
-        is_veggie_computed = is_veggie,
-        bio_percent        = bio_pct,
-        composition_data   = composition_data,
+        cost_total_cached=round(Decimal(str(cost)), 4),
+        is_vegan_computed=is_vegan,
+        is_veggie_computed=is_veggie,
+        bio_percent=bio_pct,
+        composition_data=composition_data,
     )
     logger.debug(f"Recipe #{recipe.pk} '{recipe.name}' recalculée — coût={cost:.4f}€")
 
