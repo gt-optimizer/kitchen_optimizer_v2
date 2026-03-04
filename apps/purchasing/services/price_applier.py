@@ -22,6 +22,16 @@ def apply_document_prices(document) -> dict:
     tenant   = document.tenant
     supplier = document.supplier
     today    = timezone.localdate()
+    company = tenant.companies.first() if hasattr(tenant, 'companies') else None
+
+    reception = None
+    if company:
+        reception = Reception.objects.create(
+            company=company,
+            supplier=supplier,
+            delivery_date=document.document_date or today,
+            invoice_number=document.reference or "",
+        )
 
     confirmed_lines = document.lines.filter(
         line_type="product",

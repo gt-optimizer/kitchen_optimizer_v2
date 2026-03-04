@@ -15,6 +15,34 @@
   <link rel="stylesheet" href="/static/css/charte.css">
 
   {% block extra_css %}{% endblock %}
+
+  <style>
+.dropdown-menu {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2) 0;
+  min-width: 200px;
+}
+.dropdown-item {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  padding: var(--space-2) var(--space-4);
+  transition: all var(--transition-fast);
+}
+.dropdown-item:hover {
+  background: var(--color-primary-faint);
+  color: var(--color-primary);
+}
+.dropdown-toggle::after {
+  margin-left: var(--space-1);
+}
+.atelier-nav-link.dropdown-toggle {
+  user-select: none;
+}
+</style>
 </head>
 <body>
 
@@ -28,14 +56,44 @@
   <div class="d-none d-md-flex align-items-center gap-1 flex-grow-1 ms-4">
     {% if user.is_authenticated %}
       {% if perms_catalog %}
-      <a href="{% url 'catalog:ingredient_list' %}" class="atelier-nav-link {% block nav_catalog %}{% endblock %}">
-        <i class="fa-solid fa-book-open"></i> Catalogue
-      </a>
+      <div class="dropdown">
+        <a href="#" class="atelier-nav-link {% block nav_catalog %}{% endblock %} dropdown-toggle"
+           data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fa-solid fa-book-open"></i> Catalogue
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'catalog:ingredient_list' %}">
+              <i class="fa-solid fa-carrot me-2 text-primary"></i> Ingrédients
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'catalog:recipe_list' %}">
+              <i class="fa-solid fa-utensils me-2 text-primary"></i> Recettes
+            </a>
+          </li>
+        </ul>
+      </div>
       {% endif %}
       {% if perms_purchasing %}
-      <a href="{% url 'purchasing:document_list' %}" class="atelier-nav-link {% block nav_purchasing %}{% endblock %}">
-        <i class="fa-solid fa-truck"></i> Achats
-      </a>
+      <div class="dropdown">
+        <a href="#" class="atelier-nav-link {% block nav_purchasing %}{% endblock %} dropdown-toggle"
+           data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fa-solid fa-truck"></i> Achats
+        </a>
+        <ul class="dropdown-menu">
+          <li>
+            <a class="dropdown-item" href="{% url 'purchasing:document_list' %}">
+              <i class="fa-solid fa-file-invoice me-2 text-primary"></i> BL & Factures
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="{% url 'purchasing:supplier_list' %}">
+              <i class="fa-solid fa-truck me-2 text-primary"></i> Fournisseurs
+            </a>
+          </li>
+        </ul>
+      </div>
       {% endif %}
       {% if perms_stock %}
       <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
