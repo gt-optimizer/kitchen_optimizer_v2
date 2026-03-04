@@ -1,0 +1,50 @@
+{% for line in root_lines %}
+<div class="template-line-node" id="tline-{{ line.pk }}">
+  <div class="d-flex align-items-center gap-2 py-2 px-3"
+       style="border-left: 3px solid var(--color-primary-light);
+              margin-left: {{ line.get_depth }}rem;
+              background: {% if line.output_type == 'waste' %}var(--color-danger-bg)
+                          {% elif line.output_type == 'byproduct' %}var(--color-warning-bg)
+                          {% else %}var(--color-primary-faint){% endif %};
+              border-radius: var(--radius-sm); margin-bottom: 4px;">
+    <i class="fa-solid
+      {% if line.output_type == 'ingredient' %}fa-carrot text-success
+      {% elif line.output_type == 'sellable' %}fa-tag text-info
+      {% elif line.output_type == 'byproduct' %}fa-recycle text-warning
+      {% else %}fa-trash text-danger{% endif %}"
+       style="font-size:0.75rem"></i>
+    <span class="fw-bold" style="font-size:var(--font-size-sm)">{{ line.name }}</span>
+    {% if line.selling_price_ttc %}
+      <span class="badge badge-primary ms-1">{{ line.selling_price_ttc }} €/kg TTC</span>
+    {% endif %}
+    {% if line.expected_yield_pct %}
+      <span class="badge badge-muted ms-1">~{{ line.expected_yield_pct }}%</span>
+    {% endif %}
+    <div class="ms-auto d-flex gap-1">
+      <a href="{% url 'butchery:template_line_add' template.pk %}?parent={{ line.pk }}"
+         class="btn btn-ghost btn-icon btn-sm" title="Ajouter une sous-pièce">
+        <i class="fa-solid fa-plus"></i>
+      </a>
+      <a href="{% url 'butchery:template_line_edit' template.pk line.pk %}"
+         class="btn btn-ghost btn-icon btn-sm" title="Modifier">
+        <i class="fa-solid fa-pen"></i>
+      </a>
+      <form method="post"
+            action="{% url 'butchery:template_line_delete' template.pk line.pk %}"
+            style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-icon btn-sm"
+                onclick="return confirm('Supprimer {{ line.name }} et ses sous-pièces ?')"
+                title="Supprimer">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  {% if line.children.all %}
+    {% with root_lines=line.children.all %}
+      {% include "butchery/partials/template_lines_tree.html" %}
+    {% endwith %}
+  {% endif %}
+</div>
+{% endfor %}

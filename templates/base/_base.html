@@ -95,6 +95,19 @@
         </ul>
       </div>
       {% endif %}
+      {% if perms_catalog %}
+      <div class="dropdown">
+        <a href="#" class="atelier-nav-link {% block nav_butchery %}{% endblock %} dropdown-toggle"
+           data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="fa-solid fa-cow"></i> Boucherie
+        </a>
+        <ul class="dropdown-menu">
+          <li><a class="dropdown-item" href="{% url 'butchery:session_list' %}"><i class="fa-solid fa-knife-kitchen me-2 text-primary"></i> Sessions</a></li>
+          <li><a class="dropdown-item" href="{% url 'butchery:template_list' %}"><i class="fa-solid fa-sitemap me-2 text-primary"></i> Gabarits</a></li>
+          <li><a class="dropdown-item" href="{% url 'butchery:yield_list' %}"><i class="fa-solid fa-chart-bar me-2 text-primary"></i> Rendements</a></li>
+        </ul>
+      </div>
+      {% endif %}
       {% if perms_stock %}
       <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
         <i class="fa-solid fa-boxes-stacked"></i> Stock
@@ -207,7 +220,7 @@
     </a>
     {% endif %}
 
-    {% if perms_stock %}
+      {% if perms_stock %}
     <a href="#"
        class="bottom-nav-item {% block bottom_stock %}{% endblock %}">
       <i class="fa-solid fa-boxes-stacked"></i>

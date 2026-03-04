@@ -1,0 +1,174 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ session.description }} — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'butchery:session_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ session.description }}</h1>
+  <span class="badge {% if session.status == 'open' %}badge-warning
+                     {% elif session.status == 'completed' %}badge-info
+                     {% else %}badge-success{% endif %}">
+    {{ session.get_status_display }}
+  </span>
+  <div class="ms-auto d-flex gap-2">
+    {% if session.status == "open" %}
+      <form method="post" action="{% url 'butchery:session_close' session.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary"
+                onclick="return confirm('Terminer la session ?')">
+          <i class="fa-solid fa-flag-checkered"></i> Terminer
+        </button>
+      </form>
+    {% elif session.status == "completed" %}
+      <form method="post" action="{% url 'butchery:session_validate' session.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-calculator"></i> Calculer les prix
+        </button>
+      </form>
+    {% endif %}
+    <a href="{% url 'butchery:session_edit' session.pk %}"
+       class="btn btn-ghost btn-icon" title="Modifier">
+      <i class="fa-solid fa-pen"></i>
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+  {% for m in messages %}
+  <div class="alert alert-{{ m.tags }} mb-4">
+    <i class="fa-solid fa-circle-info"></i> {{ m }}
+  </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-4">
+
+  {# ── KPIs ── #}
+  <div class="col-12">
+    <div class="row g-3">
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Poids acheté</div>
+          <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+            {{ session.purchase_weight_kg }} kg
+          </div>
+          <div class="kpi-trend flat">{{ session.purchase_price_per_kg }} €/kg HT</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Coût total HT</div>
+          <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+            {{ session.total_cost_ht|floatformat:2 }} €
+          </div>
+          {% if session.sector_tax_total_ht %}
+          <div class="kpi-trend flat">
+            dont {{ session.sector_tax_total_ht }} € taxes filière
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Rendement réel</div>
+          <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+            {% if session.real_yield_pct %}{{ session.real_yield_pct }}%{% else %}—{% endif %}
+          </div>
+          {% if session.total_waste_kg %}
+          <div class="kpi-trend down">{{ session.total_waste_kg }} kg pertes</div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="kpi-card">
+          <div class="kpi-label">Taux de marge</div>
+          <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+            {% if session.global_margin_rate %}
+              {{ session.global_margin_rate|floatformat:2 }}%
+            {% else %}—{% endif %}
+          </div>
+          {% if session.avg_cost_per_kg %}
+          <div class="kpi-trend flat">Coût moyen brut : {{ session.avg_cost_per_kg }} €/kg</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Formulaire ajout pièce ── #}
+  {% if session.status == "open" %}
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-scale-balanced"></i> Peser une pièce
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="post"
+              action="{% url 'butchery:session_line_add' session.pk %}"
+              hx-post="{% url 'butchery:session_line_add' session.pk %}"
+              hx-target="#session-lines"
+              hx-swap="innerHTML">
+          {% csrf_token %}
+          <div class="row g-2">
+            <div class="col-12">
+              <label class="form-label">Pièce *</label>
+              {{ line_form.name }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Poids (kg) *</label>
+              {{ line_form.real_weight_kg }}
+            </div>
+            <div class="col-6">
+              <label class="form-label">Destination</label>
+              {{ line_form.output_type }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">PV TTC (€/kg)</label>
+              {{ line_form.selling_price_ttc }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Ingrédient lié</label>
+              {{ line_form.linked_ingredient }}
+            </div>
+            <div class="col-12">
+              <details>
+                <summary class="text-muted" style="font-size:var(--font-size-xs);
+                         cursor:pointer; margin-bottom:var(--space-2)">
+                  Attacher à une pièce parente
+                </summary>
+                {{ line_form.parent_line }}
+              </details>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100 mt-3">
+            <i class="fa-solid fa-plus"></i> Ajouter la pesée
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Table des pièces ── #}
+  <div class="{% if session.status == 'open' %}col-md-8{% else %}col-12{% endif %}">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-list"></i> Pièces pesées
+          <span class="badge badge-muted ms-1">{{ session.lines.count }}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0" id="session-lines">
+        {% include "butchery/partials/session_lines_table.html" %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

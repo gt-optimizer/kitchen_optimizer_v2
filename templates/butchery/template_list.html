@@ -1,0 +1,66 @@
+{% extends "base/_base.html" %}
+{% block title %}Gabarits de découpe — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-cow"></i> Gabarits de découpe
+  </h1>
+  <a href="{% url 'butchery:template_add' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Nouveau gabarit
+  </a>
+</div>
+
+{% if templates %}
+<div class="row g-3">
+  {% for t in templates %}
+  <div class="col-md-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge badge-primary">{{ t.get_species_display }}</span>
+          {% if not t.is_active %}
+            <span class="badge badge-muted">Inactif</span>
+          {% endif %}
+        </div>
+        <h5 class="card-title mb-1">{{ t.name }}</h5>
+        {% if t.purchase_unit %}
+          <div class="text-muted" style="font-size:var(--font-size-xs)">
+            {{ t.purchase_unit }}
+          </div>
+        {% endif %}
+        <div class="mt-2" style="font-size:var(--font-size-xs); color:var(--color-text-muted)">
+          {{ t.lines.count }} pièce{{ t.lines.count|pluralize }}
+        </div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <a href="{% url 'butchery:template_detail' t.pk %}"
+           class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-eye"></i> Voir
+        </a>
+        <a href="{% url 'butchery:template_edit' t.pk %}"
+           class="btn btn-ghost btn-sm">
+          <i class="fa-solid fa-pen"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center" style="padding:var(--space-12)">
+    <i class="fa-solid fa-cow"
+       style="font-size:3rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+    <div class="fw-bold mb-2">Aucun gabarit</div>
+    <div class="text-muted mb-4">
+      Créez un gabarit pour définir les pièces attendues lors d'une découpe.
+    </div>
+    <a href="{% url 'butchery:template_add' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouveau gabarit
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

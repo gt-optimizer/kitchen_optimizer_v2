@@ -1,0 +1,83 @@
+{% extends "base/_base.html" %}
+{% block title %}Sessions de découpe — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-knife-kitchen"></i> Sessions de découpe
+  </h1>
+  <a href="{% url 'butchery:session_add' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Nouvelle session
+  </a>
+</div>
+
+{% if sessions %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-atelier">
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Date</th>
+          <th class="hide-mobile">Poids achat</th>
+          <th class="hide-mobile">Coût total</th>
+          <th class="hide-mobile">Rendement</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td>
+            <div class="fw-bold">{{ s.description }}</div>
+            <div class="text-muted" style="font-size:var(--font-size-xs)">
+              {{ s.get_species_display }}
+              {% if s.template %} — {{ s.template.name }}{% endif %}
+            </div>
+          </td>
+          <td>{{ s.session_date|date:"d/m/Y" }}</td>
+          <td class="hide-mobile">{{ s.purchase_weight_kg }} kg</td>
+          <td class="hide-mobile">{{ s.total_cost_ht|floatformat:2 }} €</td>
+          <td class="hide-mobile">
+            {% if s.real_yield_pct %}
+              <span class="badge {% if s.real_yield_pct >= 70 %}badge-success{% else %}badge-warning{% endif %}">
+                {{ s.real_yield_pct }}%
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.status == "open" %}
+              <span class="badge badge-warning">En cours</span>
+            {% elif s.status == "completed" %}
+              <span class="badge badge-info">À calculer</span>
+            {% else %}
+              <span class="badge badge-success">Validée</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'butchery:session_detail' s.pk %}"
+               class="btn btn-ghost btn-icon btn-sm">
+              <i class="fa-solid fa-eye"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center" style="padding:var(--space-12)">
+    <i class="fa-solid fa-knife-kitchen"
+       style="font-size:3rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+    <div class="fw-bold mb-2">Aucune session</div>
+    <a href="{% url 'butchery:session_add' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouvelle session
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

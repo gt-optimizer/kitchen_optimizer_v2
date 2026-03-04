@@ -1,0 +1,82 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'butchery:session_detail' session.pk %}"
+     class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ action }}</h1>
+  <span class="text-muted">{{ session.description }}</span>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Nom de la pièce *</label>
+          {{ form.name }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Poids réel (kg) *</label>
+          {{ form.real_weight_kg }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Destination *</label>
+          {{ form.output_type }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">PV TTC (€/kg)</label>
+          {{ form.selling_price_ttc }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">TVA</label>
+          {{ form.vat_rate }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Pièce parente</label>
+          {{ form.parent_line }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Ligne gabarit</label>
+          {{ form.template_line }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Ingrédient lié</label>
+          {{ form.linked_ingredient }}
+        </div>
+        <div class="col-12"><hr class="divider"></div>
+        <div class="col-md-6">
+          <label class="form-label">PV sous-produit (€/kg)</label>
+          {{ form.byproduct_selling_price }}
+        </div>
+        <div class="col-md-6 d-flex align-items-end pb-2">
+          <div class="form-check">
+            {{ form.byproduct_sold }}
+            <label class="form-check-label ms-2">Sous-produit vendu</label>
+          </div>
+        </div>
+        <div class="col-2">
+          <label class="form-label">Ordre</label>
+          {{ form.order }}
+        </div>
+        <div class="col-10">
+          <label class="form-label">Notes</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i> {{ action }}
+        </button>
+        <a href="{% url 'butchery:session_detail' session.pk %}"
+           class="btn btn-ghost">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

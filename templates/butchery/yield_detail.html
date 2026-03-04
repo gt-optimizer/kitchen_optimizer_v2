@@ -1,0 +1,86 @@
+{% extends "base/_base.html" %}
+{% block title %}Rendement {{ record.session_date }} — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'butchery:yield_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">
+    {{ record.session.description }}
+  </h1>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body">
+        <div class="kpi-label">Gabarit</div>
+        <div class="fw-bold mb-3">{{ record.template|default:"—" }}</div>
+        <div class="kpi-label">Fournisseur</div>
+        <div class="fw-bold mb-3">{{ record.supplier|default:"—" }}</div>
+        <div class="kpi-label">PA/kg HT</div>
+        <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+          {{ record.purchase_price_per_kg }} €
+        </div>
+        <hr class="divider">
+        <div class="kpi-label">Rendement global</div>
+        <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+          {{ record.global_yield_pct }}%
+        </div>
+        <hr class="divider">
+        <div class="kpi-label">Coût réel/kg valorisé</div>
+        <div class="kpi-value text-primary" style="font-size:var(--font-size-2xl)">
+          {{ record.effective_cost_per_kg }} €
+        </div>
+        <hr class="divider">
+        <div class="kpi-label">Taux de marge global</div>
+        <div class="kpi-value" style="font-size:var(--font-size-2xl)">
+          {{record.global_margin_rate|floatformat:2}}%
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-table"></i> Détail par pièce
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-atelier">
+          <thead>
+            <tr>
+              <th>Pièce</th>
+              <th>Poids (kg)</th>
+              <th>PV TTC</th>
+              <th>PV HT</th>
+              <th>Prix de revient</th>
+              <th>CA</th>
+              <th>Marge</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for name, data in record.yields_data.items %}
+            <tr>
+              <td class="fw-bold">{{ name }}</td>
+              <td>{{ data.weight_kg }} kg</td>
+              <td>{{ data.pv_ttc }} €</td>
+              <td>{{ data.pv_ht }} €</td>
+              <td class="fw-bold text-primary">{{ data.cost_per_kg }} €/kg</td>
+              <td>{{ data.ca }} €</td>
+              <td>
+                <span class="badge badge-success">{{ data.margin }} €</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

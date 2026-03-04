@@ -1,0 +1,66 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ template.name }} — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'butchery:template_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ template.name }}</h1>
+  <span class="badge badge-primary">{{ template.get_species_display }}</span>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'butchery:template_line_add' template.pk %}"
+       class="btn btn-secondary">
+      <i class="fa-solid fa-plus"></i> Ajouter une pièce
+    </a>
+    <a href="{% url 'butchery:template_edit' template.pk %}"
+       class="btn btn-ghost">
+      <i class="fa-solid fa-pen"></i> Modifier
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="kpi-label">Unité d'achat</div>
+        <div class="fw-bold">{{ template.purchase_unit|default:"—" }}</div>
+        <hr class="divider">
+        <div class="kpi-label">Pièces définies</div>
+        <div class="kpi-value">{{ template.lines.count }}</div>
+        {% if template.description %}
+        <hr class="divider">
+        <div class="text-muted" style="font-size:var(--font-size-xs)">
+          {{ template.description }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-9">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-sitemap"></i> Arbre de découpe
+        </h5>
+        <a href="{% url 'butchery:template_line_add' template.pk %}"
+           class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-plus"></i> Pièce racine
+        </a>
+      </div>
+      <div class="card-body" id="template-lines-tree">
+        {% if root_lines %}
+          {% include "butchery/partials/template_lines_tree.html" %}
+        {% else %}
+          <div class="text-center text-muted" style="padding:var(--space-8)">
+            Aucune pièce définie — commencez par ajouter les pièces principales.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

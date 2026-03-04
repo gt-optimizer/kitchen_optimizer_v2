@@ -1,0 +1,168 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ supplier.name }} — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'purchasing:supplier_list' %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ supplier.name }}</h1>
+  <div class="ms-auto d-flex gap-2">
+    <a href="{% url 'purchasing:supplier_edit' supplier.pk %}" class="btn btn-secondary">
+      <i class="fa-solid fa-pen"></i> Modifier
+    </a>
+    <a href="{% url 'purchasing:document_upload' %}" class="btn btn-primary">
+      <i class="fa-solid fa-file-arrow-up"></i> Importer un BL
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="card-title"><i class="fa-solid fa-info-circle"></i> Coordonnées</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3" style="font-size:var(--font-size-sm)">
+          {% if supplier.address %}
+          <div class="col-12">
+            <div class="form-label">Adresse</div>
+            <div>{{ supplier.address }}</div>
+            <div>{{ supplier.zipcode }} {{ supplier.city }}</div>
+          </div>
+          {% endif %}
+          {% if supplier.phone %}
+          <div class="col-12">
+            <div class="form-label">Téléphone</div>
+            <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
+          </div>
+          {% endif %}
+          {% if supplier.email %}
+          <div class="col-12">
+            <div class="form-label">Email</div>
+            <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
+          </div>
+          {% endif %}
+          {% if supplier.siret %}
+          <div class="col-6">
+            <div class="form-label">SIRET</div>
+            <div>{{ supplier.siret }}</div>
+          </div>
+          {% endif %}
+          {% if supplier.rcs %}
+          <div class="col-6">
+            <div class="form-label">RCS</div>
+            <div>{{ supplier.rcs }}</div>
+          </div>
+          {% endif %}
+          {% if supplier.vat_number %}
+          <div class="col-12">
+            <div class="form-label">N° TVA</div>
+            <div>{{ supplier.vat_number }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Ingrédients référencés #}
+    {% with refs=supplier.supplier_ingredients.all %}
+    {% if refs %}
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-carrot"></i> Références
+          <span class="badge badge-muted ms-1">{{ refs.count }}</span>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <table class="table-atelier">
+          <thead>
+            <tr>
+              <th>Ingrédient</th>
+              <th>Prix négocié</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ref in refs %}
+            <tr>
+              <td style="font-size:var(--font-size-xs)">
+                {{ ref.ingredient.name }}
+                {% if ref.is_preferred %}
+                  <i class="fa-solid fa-star text-warning ms-1" title="Fournisseur préféré"></i>
+                {% endif %}
+              </td>
+              <td style="font-size:var(--font-size-xs)">
+                {% if ref.negotiated_price %}
+                  {{ ref.negotiated_price }} €
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="card-title">
+          <i class="fa-solid fa-file-invoice"></i> Documents récents
+          <span class="badge badge-muted ms-1">{{ documents.count }}</span>
+        </h5>
+      </div>
+      {% if documents %}
+      <div class="card-body p-0">
+        <table class="table-atelier">
+          <thead>
+            <tr>
+              <th>Référence</th>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Statut</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+            <tr>
+              <td>{{ doc.reference|default:"Sans référence" }}</td>
+              <td>{{ doc.get_document_type_display }}</td>
+              <td>{{ doc.document_date|date:"d/m/Y"|default:"—" }}</td>
+              <td>
+                {% if doc.status == "pending" %}
+                  <span class="badge badge-muted">En attente</span>
+                {% elif doc.status == "parsed" %}
+                  <span class="badge badge-warning">À valider</span>
+                {% elif doc.status == "validated" %}
+                  <span class="badge badge-success">Validé</span>
+                {% elif doc.status == "error" %}
+                  <span class="badge badge-danger">Erreur</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'purchasing:document_detail' doc.pk %}"
+                   class="btn btn-ghost btn-icon btn-sm">
+                  <i class="fa-solid fa-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-center text-muted" style="padding:var(--space-8)">
+        Aucun document importé pour ce fournisseur
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+<tr id="line-{{ line.pk }}"
+    style="{% if not line.is_confirmed %}opacity:0.7{% endif %}">
+  <td>
+    <div class="d-flex align-items-center gap-2"
+         style="padding-left: calc({{ depth|default:0 }} * 1.5rem)">
+      {% if depth %}
+        <i class="fa-solid fa-turn-down-right text-muted"
+           style="font-size:0.7rem"></i>
+      {% endif %}
+      <i class="fa-solid
+        {% if line.output_type == 'ingredient' %}fa-carrot text-success
+        {% elif line.output_type == 'sellable' %}fa-tag
+        {% elif line.output_type == 'byproduct' %}fa-recycle text-warning
+        {% elif line.output_type == 'processing' %}fa-scissors text-info
+        {% else %}fa-trash text-danger{% endif %}"
+         style="font-size:0.75rem"></i>
+      <span class="fw-bold">{{ line.name }}</span>
+      {% if line.linked_ingredient %}
+        <span class="badge badge-muted" style="font-size:0.6rem">
+          {{ line.linked_ingredient.name|truncatechars:20 }}
+        </span>
+      {% endif %}
+    </div>
+  </td>
+  <td class="fw-bold">{{ line.real_weight_kg }} kg</td>
+  <td class="hide-mobile">
+    <span class="badge
+      {% if line.output_type == 'ingredient' %}badge-success
+      {% elif line.output_type == 'sellable' %}badge-info
+      {% elif line.output_type == 'byproduct' %}badge-warning
+      {% elif line.output_type == 'processing' %}badge-primary
+      {% else %}badge-danger{% endif %}">
+      {{ line.get_output_type_display }}
+    </span>
+  </td>
+  <td class="hide-mobile">
+    {% if line.selling_price_ttc %}{{ line.selling_price_ttc }} €{% else %}—{% endif %}
+  </td>
+  <td class="hide-mobile">
+    {% if line.cost_per_kg %}
+      <span class="fw-bold text-primary">{{ line.cost_per_kg }} €/kg</span>
+    {% else %}—{% endif %}
+  </td>
+  <td>
+    <form method="post"
+          action="{% url 'butchery:session_line_confirm' session.pk line.pk %}"
+          hx-post="{% url 'butchery:session_line_confirm' session.pk line.pk %}"
+          hx-target="#line-{{ line.pk }}"
+          hx-swap="outerHTML">
+      {% csrf_token %}
+      <button type="submit"
+              class="btn btn-sm {% if line.is_confirmed %}btn-primary{% else %}btn-ghost{% endif %}"
+              title="{% if line.is_confirmed %}Pesée confirmée{% else %}Confirmer la pesée{% endif %}">
+        <i class="fa-solid {% if line.is_confirmed %}fa-circle-check{% else %}fa-circle{% endif %}"></i>
+      </button>
+    </form>
+  </td>
+  <td>
+    <div class="table-actions">
+      <a href="{% url 'butchery:session_line_edit' session.pk line.pk %}"
+         class="btn btn-ghost btn-icon btn-sm">
+        <i class="fa-solid fa-pen"></i>
+      </a>
+      <form method="post"
+            action="{% url 'butchery:session_line_delete' session.pk line.pk %}"
+            hx-post="{% url 'butchery:session_line_delete' session.pk line.pk %}"
+            hx-target="#session-lines"
+            hx-swap="innerHTML">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-icon btn-sm"
+                onclick="return confirm('Supprimer cette pièce ?')">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </form>
+    </div>
+  </td>
+</tr>

@@ -1,0 +1,17 @@
+[
+  {
+    "model": "utilities.vatrate",
+    "pk": 1,
+    "fields": { "name": "TVA 5,5%", "rate": "0.0550" }
+  },
+  {
+    "model": "utilities.vatrate",
+    "pk": 2,
+    "fields": { "name": "TVA 10%", "rate": "0.1000" }
+  },
+  {
+    "model": "utilities.vatrate",
+    "pk": 3,
+    "fields": { "name": "TVA 20%", "rate": "0.2000" }
+  }
+]

@@ -1,0 +1,73 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+{% block nav_butchery %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'butchery:template_detail' template.pk %}"
+     class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">{{ action }}</h1>
+  <span class="text-muted">{{ template.name }}</span>
+</div>
+
+<div class="card" style="max-width:640px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">Nom de la pièce *</label>
+          {{ form.name }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Code nomenclature</label>
+          {{ form.norm_code }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Destination *</label>
+          {{ form.output_type }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Pièce parente</label>
+          {{ form.parent }}
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">PV TTC référence (€/kg)</label>
+          {{ form.selling_price_ttc }}
+          <div class="form-hint">Utilisé pour le calcul du prix de revient</div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">TVA</label>
+          {{ form.vat_rate }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Rendement théo. (%)</label>
+          {{ form.expected_yield_pct }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Ingrédient lié</label>
+          {{ form.linked_ingredient }}
+          <div class="form-hint">Optionnel — pour la propagation des prix</div>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Ordre</label>
+          {{ form.order }}
+        </div>
+        <div class="col-10">
+          <label class="form-label">Notes</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-check"></i> {{ action }}
+        </button>
+        <a href="{% url 'butchery:template_detail' template.pk %}"
+           class="btn btn-ghost">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

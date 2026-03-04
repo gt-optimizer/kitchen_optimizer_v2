@@ -1,0 +1,30 @@
+{% if root_lines %}
+<table class="table-atelier">
+  <thead>
+    <tr>
+      <th>Pièce</th>
+      <th>Poids (kg)</th>
+      <th class="hide-mobile">Destination</th>
+      <th class="hide-mobile">PV TTC</th>
+      <th class="hide-mobile">Prix de revient</th>
+      <th>Statut</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for line in root_lines %}
+      {% include "butchery/partials/session_line_row.html" with depth=0 %}
+      {% for sub in line.sub_lines.all %}
+        {% include "butchery/partials/session_line_row.html" with line=sub depth=1 %}
+        {% for subsub in sub.sub_lines.all %}
+          {% include "butchery/partials/session_line_row.html" with line=subsub depth=2 %}
+        {% endfor %}
+      {% endfor %}
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="text-center text-muted" style="padding:var(--space-8)">
+  Aucune pièce pesée — utilisez le formulaire pour ajouter des pesées.
+</div>
+{% endif %}

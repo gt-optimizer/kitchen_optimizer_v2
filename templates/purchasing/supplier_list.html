@@ -1,0 +1,79 @@
+{% extends "base/_base.html" %}
+{% block title %}Fournisseurs — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-truck"></i> Fournisseurs
+  </h1>
+  <a href="{% url 'purchasing:supplier_add' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Nouveau fournisseur
+  </a>
+</div>
+
+{% if suppliers %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-atelier">
+      <thead>
+        <tr>
+          <th>Nom</th>
+          <th class="hide-mobile">Ville</th>
+          <th class="hide-mobile">SIRET</th>
+          <th class="hide-mobile">TVA</th>
+          <th class="hide-mobile">Documents</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for supplier in suppliers %}
+        <tr>
+          <td>
+            <a href="{% url 'purchasing:supplier_detail' supplier.pk %}" class="fw-bold">
+              {{ supplier.name }}
+            </a>
+            {% if not supplier.is_active %}
+              <span class="badge badge-muted ms-1">Inactif</span>
+            {% endif %}
+          </td>
+          <td class="hide-mobile">{{ supplier.city|default:"—" }}</td>
+          <td class="hide-mobile">{{ supplier.siret|default:"—" }}</td>
+          <td class="hide-mobile">{{ supplier.vat_number|default:"—" }}</td>
+          <td class="hide-mobile">
+            <span class="badge badge-muted">
+              {{ supplier.documents.count }} doc.
+            </span>
+          </td>
+          <td>
+            <div class="table-actions">
+              <a href="{% url 'purchasing:supplier_detail' supplier.pk %}"
+                 class="btn btn-ghost btn-icon btn-sm" title="Voir">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              <a href="{% url 'purchasing:supplier_edit' supplier.pk %}"
+                 class="btn btn-ghost btn-icon btn-sm" title="Modifier">
+                <i class="fa-solid fa-pen"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center" style="padding:var(--space-12)">
+    <i class="fa-solid fa-truck"
+       style="font-size:3rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+    <div class="fw-bold mb-2">Aucun fournisseur</div>
+    <div class="text-muted mb-4">Ajoutez votre premier fournisseur</div>
+    <a href="{% url 'purchasing:supplier_add' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouveau fournisseur
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
