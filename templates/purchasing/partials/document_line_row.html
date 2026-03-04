@@ -28,12 +28,12 @@
     {% if line.line_type == "product" and doc.status == "parsed" %}
 
       {% if line.match_score and line.match_score >= 85 %}
-        {# Score fiable — affiche le nom + badge vert #}
+        {# Score fiable — badge vert #}
         <span class="text-success fw-bold">{{ line.matched_ingredient.name }}</span>
         <span class="badge badge-success ms-1">{{ line.match_score|floatformat:0 }}%</span>
 
       {% elif line.matched_ingredient and line.match_score %}
-        {# Score faible — affiche le match + warning + select correction #}
+        {# Score faible — select de correction #}
         <div class="mb-1">
           <span class="text-warning fw-bold">{{ line.matched_ingredient.name }}</span>
           <span class="badge badge-warning ms-1">{{ line.match_score|floatformat:0 }}%</span>
@@ -59,13 +59,19 @@
           </div>
         </form>
 
+        <a href="{% url 'purchasing:ingredient_create_from_line' doc.pk line.pk %}"
+           class="btn btn-light btn-sm w-100"
+           style="font-size:var(--font-size-xs)">
+          <i class="fa-solid fa-plus"></i> Créer cet ingrédient
+        </a>
+
       {% else %}
-        {# Pas de match — select pour association manuelle #}
+        {# Pas de match — select + bouton créer #}
         <form hx-post="{% url 'purchasing:document_line_match' doc.pk line.pk %}"
               hx-target="#line-{{ line.pk }}"
               hx-swap="outerHTML">
           {% csrf_token %}
-          <div class="d-flex gap-1">
+          <div class="d-flex gap-1 mb-1">
             <select name="ingredient_pk" class="form-select"
                     style="font-size:var(--font-size-xs); padding:2px 4px; height:auto">
               <option value="">— Non associé —</option>
@@ -78,6 +84,11 @@
             </button>
           </div>
         </form>
+        <a href="{% url 'purchasing:ingredient_create_from_line' doc.pk line.pk %}"
+           class="btn btn-light btn-sm w-100"
+           style="font-size:var(--font-size-xs)">
+          <i class="fa-solid fa-plus"></i> Créer cet ingrédient
+        </a>
       {% endif %}
 
     {% else %}
@@ -114,5 +125,3 @@
   {% else %}
   <td></td>
   {% endif %}
-
-</tr>

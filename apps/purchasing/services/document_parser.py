@@ -1,3 +1,6 @@
+from apps.catalog.models import Ingredient
+from apps.purchasing.models import SupplierIngredient
+
 """
 Service de parsing des documents de livraison (BL/factures).
 
@@ -213,6 +216,11 @@ def parse_document_lines_via_llm(full_text: str) -> list[dict]:
     - unit : unité ("kg", "pièce", "colis", "litre"...) ou ""
     - unit_price_ht : prix unitaire HT numérique ou null
     - total_ht : total HT de la ligne numérique ou null
+    - les données de traçabilité (numéros de lots, DLC ou DLUO ou DDM) ou null
+    
+    Attention pour les articles au kg un nombre de pièces peut être mentionné, il faut trouver le bon poids.
+    Vérifie la cohérence : quantity × unit_price_ht doit être proche de total_ht.
+    Si ce n'est pas le cas, recalcule la quantité réelle depuis total_ht / unit_price_ht.
 
     Retourne UNIQUEMENT un tableau JSON valide, sans texte avant ou après.
 
@@ -273,37 +281,61 @@ def _to_decimal(value) -> Optional[Decimal]:
         return None
 
 
-def match_ingredients(lines: list[dict], tenant_ingredients: list) -> list[dict]:
+def match_ingredients(lines: list[dict], tenant_ingredients: list, tenant=None, supplier=None) -> list[dict]:
     """
-    Matching fuzzy entre les libellés OCR et les ingrédients de la BDD.
-    Utilise rapidfuzz avec score de confiance.
-
-    tenant_ingredients : liste de (pk, name, supplier_refs)
+    Matching fuzzy avec apprentissage.
+    Priorité : 1. SupplierLabelMapping (apprentissage) → 2. rapidfuzz
     """
     if not tenant_ingredients:
         return lines
 
-    # Prépare les noms pour le matching
     ingredient_names = [ing["name"] for ing in tenant_ingredients]
 
     for line in lines:
         if line["line_type"] != "product":
             continue
 
-        # Nettoie le libellé pour le matching
-        clean_label = re.sub(r'\d+[.,]\d+', '', line["raw_label"])  # retire les chiffres
-        clean_label = re.sub(r'\b(kg|g|l|pce|pc|bt|col)\b', '', clean_label, flags=re.IGNORECASE)
+        raw_label = line["raw_label"].strip()
+        if len(raw_label) < 3:
+            continue
+
+        normalized = _normalize_label(raw_label)
+
+        # ── 1. Cherche dans les mappings appris ───────────────────────────
+        if tenant:
+            from apps.purchasing.models import SupplierLabelMapping
+            from django.db.models import Q
+
+            mapping = SupplierLabelMapping.objects.filter(
+                tenant=tenant,
+                normalized_label=normalized,
+            ).filter(
+                Q(supplier=supplier) | Q(supplier__isnull=True)
+            ).order_by("-score").first()
+
+            if mapping:
+                line["matched_ingredient_pk"]   = mapping.ingredient.pk
+                line["matched_ingredient_name"] = mapping.ingredient.name
+                line["match_score"]             = min(100.0, 80 + mapping.score)
+                line["from_learning"]           = True
+                continue
+
+        # ── 2. Matching fuzzy rapidfuzz ───────────────────────────────────
+        clean_label = re.sub(r'\d+[.,]\d+', '', raw_label)
+        clean_label = re.sub(
+            r'\b(kg|g|l|pce|pc|bt|col|sp|bio|pad|bf|sv|sv|ss|os|av)\b',
+            '', clean_label, flags=re.IGNORECASE
+        )
         clean_label = clean_label.strip()
 
         if len(clean_label) < 3:
             continue
 
-        # Matching fuzzy — token_sort_ratio gère les mots dans un ordre différent
         result = process.extractOne(
             clean_label,
             ingredient_names,
             scorer=fuzz.token_sort_ratio,
-            score_cutoff=40,  # seuil minimum 40%
+            score_cutoff=40,
         )
 
         if result:
@@ -311,22 +343,96 @@ def match_ingredients(lines: list[dict], tenant_ingredients: list) -> list[dict]
             line["matched_ingredient_pk"]   = tenant_ingredients[idx]["pk"]
             line["matched_ingredient_name"] = matched_name
             line["match_score"]             = score
+            line["from_learning"]           = False
         else:
             line["matched_ingredient_pk"]   = None
             line["matched_ingredient_name"] = None
             line["match_score"]             = None
+            line["from_learning"]           = False
 
     return lines
 
 
-def process_document(document_instance) -> dict:
-    """
-    Fonction principale — traite un DeliveryDocument.
-    Retourne un dict avec les lignes parsées et enrichies.
-    """
-    from apps.catalog.models import Ingredient
-    from apps.purchasing.models import SupplierIngredient
+def _normalize_label(label: str) -> str:
+    """Normalise un libellé pour le matching : minuscules, sans chiffres, sans unités."""
+    label = label.lower().strip()
+    label = re.sub(r'\d+[.,]\d+', '', label)
+    label = re.sub(r'\b(kg|g|l|pce|pc|bt|col|sp|bio|pad|bf|sv|ss|os|av)\b', '', label)
+    label = re.sub(r'\s+', ' ', label).strip()
+    return label
 
+
+def detect_supplier(full_text: str, tenant) -> dict:
+    """
+    Tente de détecter le fournisseur depuis le texte OCR.
+    Cherche d'abord en base (nom, SIRET, TVA, RCS).
+    Retourne un dict avec le fournisseur trouvé ou les données extraites.
+    """
+    from apps.purchasing.models import Supplier
+
+    # Cherche dans les 15 premières lignes
+    first_lines = "\n".join(full_text.split("\n")[:15]).lower()
+
+    # ── Recherche en base ─────────────────────────────────────────────────
+    suppliers = Supplier.objects.filter(tenant=tenant)
+
+    for supplier in suppliers:
+        if supplier.name.lower() in first_lines:
+            return {"found": True, "supplier": supplier}
+        if supplier.siret and supplier.siret in first_lines:
+            return {"found": True, "supplier": supplier}
+        if supplier.vat_number and supplier.vat_number.lower() in first_lines:
+            return {"found": True, "supplier": supplier}
+        if supplier.rcs and supplier.rcs.lower() in first_lines:
+            return {"found": True, "supplier": supplier}
+
+    # ── Extraction depuis le texte pour pré-remplir le formulaire ────────
+    extracted = _extract_supplier_data_via_llm(full_text)
+    return {"found": False, "extracted": extracted}
+
+
+def _extract_supplier_data_via_llm(full_text: str) -> dict:
+    """Extrait les données fournisseur via Mistral."""
+    import httpx
+    from django.conf import settings
+
+    prompt = f"""Extrait les informations du fournisseur (vendeur) depuis ce document.
+Retourne UNIQUEMENT un objet JSON avec ces champs (null si non trouvé) :
+- name : raison sociale
+- address : adresse
+- zipcode : code postal
+- city : ville
+- phone : téléphone
+- email : email
+- siret : numéro SIRET (14 chiffres)
+- rcs : numéro RCS
+- vat_number : numéro TVA intracommunautaire
+
+Texte :
+{full_text[:2000]}
+"""
+    try:
+        response = httpx.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {settings.MISTRAL_API_KEY}"},
+            json={
+                "model":       "mistral-small-latest",
+                "messages":    [{"role": "user", "content": prompt}],
+                "max_tokens":  500,
+                "temperature": 0.0,
+            },
+            timeout=20,
+        )
+        import json
+        content = response.json()["choices"][0]["message"]["content"].strip()
+        content = content.replace("```json", "").replace("```", "").strip()
+        return json.loads(content)
+    except Exception as e:
+        logger.error(f"Supplier extraction error: {e}")
+        return {}
+
+
+def process_document(document_instance) -> dict:
     filepath = document_instance.document.path
     tenant   = document_instance.tenant
 
@@ -339,7 +445,6 @@ def process_document(document_instance) -> dict:
         if page["has_text"]:
             full_text += page["text"] + "\n"
         else:
-            logger.info(f"Page {page['page']} sans texte natif — fallback Mistral Vision")
             mistral_text = extract_text_via_mistral(filepath, page["page"])
             if mistral_text:
                 full_text += mistral_text + "\n"
@@ -348,39 +453,45 @@ def process_document(document_instance) -> dict:
     if not full_text.strip():
         return {"error": "Impossible d'extraire le texte du document.", "lines": []}
 
-    # ── 2. Parsing lignes ─────────────────────────────────────────────────
+    # ── 2. Détection fournisseur ──────────────────────────────────────────
+    supplier_detection = detect_supplier(full_text, tenant)
+
+    if supplier_detection["found"]:
+        document_instance.supplier = supplier_detection["supplier"]
+        document_instance.save(update_fields=["supplier"])
+
+    # ── 3. Parsing lignes via LLM ─────────────────────────────────────────
     parsed_lines = parse_document_lines_via_llm(full_text)
 
-    # ── 3. Récupère les ingrédients du tenant pour le matching ────────────
-    # Priorise les références fournisseur si le fournisseur est connu
+    # ── 4. Récupère les ingrédients du tenant pour le matching ────────────
+    from apps.catalog.models import Ingredient
+    from apps.purchasing.models import SupplierIngredient
+
     tenant_ingredients = []
 
     if document_instance.supplier:
-        # Références fournisseur en premier (plus fiables)
         supplier_refs = SupplierIngredient.objects.filter(
             supplier=document_instance.supplier,
             is_active=True,
         ).select_related("ingredient")
-
         for ref in supplier_refs:
             tenant_ingredients.append({
                 "pk":   ref.ingredient.pk,
                 "name": ref.supplier_item_name or ref.ingredient.name,
             })
 
-    # Complète avec tous les ingrédients actifs du tenant
     existing_pks = {i["pk"] for i in tenant_ingredients}
-    all_ingredients = Ingredient.objects.filter(is_active=True)
-    for ing in all_ingredients:
+    for ing in Ingredient.objects.filter(is_active=True):
         if ing.pk not in existing_pks:
             tenant_ingredients.append({"pk": ing.pk, "name": ing.name})
 
-    # ── 4. Matching fuzzy ─────────────────────────────────────────────────
+    # ── 5. Matching fuzzy ─────────────────────────────────────────────────
     matched_lines = match_ingredients(parsed_lines, tenant_ingredients)
 
     return {
-        "lines":  matched_lines,
-        "engine": engine,
-        "pages":  len(pages),
-        "error":  None,
+        "lines":              matched_lines,
+        "engine":             engine,
+        "pages":              len(pages),
+        "error":              None,
+        "supplier_detection": supplier_detection,
     }

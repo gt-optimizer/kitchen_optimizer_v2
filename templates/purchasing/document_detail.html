@@ -40,6 +40,38 @@
       <div class="card-header">
         <h5 class="card-title"><i class="fa-solid fa-info-circle"></i> Informations</h5>
       </div>
+      {% if doc.ocr_raw.supplier_extracted and not doc.supplier %}
+      <div class="card mb-4 border-warning">
+        <div class="card-header" style="background:var(--color-warning-bg)">
+          <h5 class="card-title">
+            <i class="fa-solid fa-triangle-exclamation text-warning"></i>
+            Fournisseur non reconnu
+          </h5>
+        </div>
+        <div class="card-body">
+          {% with s=doc.ocr_raw.supplier_extracted %}
+          <div class="mb-3" style="font-size:var(--font-size-sm)">
+            <div class="fw-bold">{{ s.name|default:"—" }}</div>
+            <div class="text-muted">
+              {{ s.address|default:"" }}
+              {% if s.zipcode %}{{ s.zipcode }}{% endif %}
+              {{ s.city|default:"" }}
+            </div>
+            {% if s.siret %}
+              <div class="text-muted">SIRET : {{ s.siret }}</div>
+            {% endif %}
+            {% if s.vat_number %}
+              <div class="text-muted">TVA : {{ s.vat_number }}</div>
+            {% endif %}
+          </div>
+          <a href="{% url 'purchasing:supplier_add_from_doc' doc.pk %}"
+             class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Créer ce fournisseur
+          </a>
+          {% endwith %}
+        </div>
+      </div>
+      {% endif %}
       <div class="card-body">
         <div class="row g-2">
           <div class="col-6">

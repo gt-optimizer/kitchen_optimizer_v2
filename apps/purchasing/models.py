@@ -302,3 +302,32 @@ class DeliveryLine(models.Model):
     @property
     def is_sector_tax(self):
         return self.line_type == "sector_tax"
+
+
+class SupplierLabelMapping(models.Model):
+    """
+    Apprentissage : mémorise l'association libellé fournisseur → ingrédient.
+    Plus le score est élevé, plus le mapping est fiable.
+    """
+    tenant          = models.ForeignKey(Tenant, on_delete=models.CASCADE)
+    supplier        = models.ForeignKey(Supplier, on_delete=models.CASCADE,
+                                        null=True, blank=True)
+    raw_label       = models.CharField(max_length=300, verbose_name="Libellé brut")
+    normalized_label = models.CharField(max_length=300, verbose_name="Libellé normalisé")
+    ingredient      = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
+    score           = models.PositiveSmallIntegerField(default=1,
+                                                       verbose_name="Score confiance")
+    last_seen       = models.DateField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Mapping libellé fournisseur"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tenant", "supplier", "normalized_label"],
+                name="unique_supplier_label_mapping"
+            )
+        ]
+        ordering = ["-score"]
+
+    def __str__(self):
+        return f"{self.raw_label} → {self.ingredient.name} ({self.score})"

@@ -1,0 +1,33 @@
+{% extends "base/_base.html" %}
+{% block title %}Créer un ingrédient — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Créer un ingrédient</h1>
+
+<div class="card" style="max-width:600px">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Nom *</label>
+        {{ form.name }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Unité d'achat *</label>
+        {{ form.purchase_unit }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Unité d'utilisation *</label>
+        {{ form.use_unit }}
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-check"></i> Créer et associer
+      </button>
+      <a href="{% url 'purchasing:document_detail' doc.pk %}" class="btn btn-ghost ms-2">
+        Annuler
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}

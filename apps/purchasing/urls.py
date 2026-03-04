@@ -20,4 +20,8 @@ urlpatterns = [
          views.document_line_confirm, name="document_line_confirm"),
     path("documents/<int:pk>/lines/<int:line_pk>/match/",
          views.document_line_match,   name="document_line_match"),
+    path("documents/<int:pk>/supplier/create/",
+         views.supplier_add_from_doc, name="supplier_add_from_doc"),
+    path("documents/<int:pk>/lines/<int:line_pk>/create-ingredient/",
+         views.ingredient_create_from_line, name="ingredient_create_from_line"),
 ]

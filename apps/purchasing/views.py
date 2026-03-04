@@ -182,6 +182,17 @@ def document_parse(request, pk):
         doc.ocr_engine = result["engine"]
         doc.save(update_fields=["status", "ocr_raw", "ocr_engine"])
 
+        supplier_detection = result.get("supplier_detection", {})
+        if not supplier_detection.get("found") and supplier_detection.get("extracted"):
+            # Stocke les données extraites pour proposer la création
+            doc.ocr_raw["supplier_extracted"] = supplier_detection["extracted"]
+            doc.save(update_fields=["ocr_raw"])
+            messages.warning(
+                request,
+                f"Fournisseur non reconnu dans votre base. "
+                f"Consultez le document pour le créer."
+            )
+
         nb = len(result["lines"])
         messages.success(request, f"Document analysé — {nb} ligne(s) extraite(s) via {result['engine']}.")
 
@@ -221,18 +232,16 @@ def document_validate(request, pk):
 
 @login_required
 def document_line_confirm(request, pk, line_pk):
-    """Confirme ou déconfirme le matching d'une ligne — HTMX."""
     line = get_object_or_404(DeliveryLine, pk=line_pk, document__pk=pk)
     if request.method == "POST":
         line.match_confirmed = not line.match_confirmed
         line.save(update_fields=["match_confirmed"])
+        # Sauvegarde le mapping si confirmation
+        if line.match_confirmed and line.matched_ingredient:
+            _save_label_mapping(line, line.matched_ingredient, request.tenant)
 
     from apps.catalog.models import Ingredient
-
-    ingredients = Ingredient.objects.filter(
-        is_active=True
-    ).order_by("name").values("pk", "name")
-
+    ingredients = Ingredient.objects.filter(is_active=True).order_by("name").values("pk", "name")
     html = render_to_string(
         "purchasing/partials/document_line_row.html",
         {"line": line, "doc": line.document, "ingredients": ingredients},
@@ -243,7 +252,6 @@ def document_line_confirm(request, pk, line_pk):
 
 @login_required
 def document_line_match(request, pk, line_pk):
-    """Modifie manuellement l'ingrédient associé à une ligne — HTMX."""
     line = get_object_or_404(DeliveryLine, pk=line_pk, document__pk=pk)
     if request.method == "POST":
         ingredient_pk = request.POST.get("ingredient_pk")
@@ -254,16 +262,149 @@ def document_line_match(request, pk, line_pk):
             line.match_score        = 100.0
             line.match_confirmed    = True
             line.save(update_fields=["matched_ingredient", "match_score", "match_confirmed"])
+            # Sauvegarde le mapping
+            _save_label_mapping(line, ingredient, request.tenant)
 
     from apps.catalog.models import Ingredient
-
-    ingredients = Ingredient.objects.filter(
-        is_active=True
-    ).order_by("name").values("pk", "name")
-
+    ingredients = Ingredient.objects.filter(is_active=True).order_by("name").values("pk", "name")
     html = render_to_string(
         "purchasing/partials/document_line_row.html",
         {"line": line, "doc": line.document, "ingredients": ingredients},
         request=request,
     )
     return HttpResponse(html)
+
+@login_required
+def supplier_add_from_doc(request, pk):
+    doc = get_object_or_404(DeliveryDocument, pk=pk, tenant=request.tenant)
+    extracted = doc.ocr_raw.get("supplier_extracted", {})
+
+    if request.method == "POST":
+        form = SupplierForm(request.POST)
+        if form.is_valid():
+            supplier = form.save(commit=False)
+            supplier.tenant = request.tenant
+            supplier.save()
+            # Lie le fournisseur au document
+            doc.supplier = supplier
+            doc.save(update_fields=["supplier"])
+            messages.success(request, f"Fournisseur « {supplier.name} » créé et lié au document.")
+            return redirect("purchasing:document_detail", pk=doc.pk)
+    else:
+        # Pré-remplit le formulaire avec les données extraites
+        form = SupplierForm(initial={
+            "name":       extracted.get("name", ""),
+            "address":    extracted.get("address", ""),
+            "zipcode":    extracted.get("zipcode", ""),
+            "city":       extracted.get("city", ""),
+            "phone":      extracted.get("phone", ""),
+            "email":      extracted.get("email", ""),
+            "siret":      extracted.get("siret", ""),
+            "rcs":        extracted.get("rcs", ""),
+            "vat_number": extracted.get("vat_number", ""),
+        })
+
+    return render(request, "purchasing/supplier_form.html", {
+        "form":    form,
+        "action":  "Créer le fournisseur",
+        "doc":     doc,
+    })
+
+
+def _save_label_mapping(line, ingredient, tenant):
+    """Mémorise ou renforce le mapping libellé → ingrédient."""
+    from .services.document_parser import _normalize_label
+    from .models import SupplierLabelMapping
+
+    normalized = _normalize_label(line.raw_label)
+    if not normalized:
+        return
+
+    mapping, created = SupplierLabelMapping.objects.get_or_create(
+        tenant=tenant,
+        supplier=line.document.supplier,
+        normalized_label=normalized,
+        defaults={
+            "raw_label":  line.raw_label,
+            "ingredient": ingredient,
+            "score":      1,
+        }
+    )
+    if not created:
+        # Renforce le score si même ingrédient
+        if mapping.ingredient == ingredient:
+            mapping.score = min(20, mapping.score + 1)
+        else:
+            # Ingrédient différent — corrige le mapping
+            mapping.ingredient = ingredient
+            mapping.score      = 1
+            mapping.raw_label  = line.raw_label
+        mapping.save()
+
+@login_required
+def ingredient_create_from_line(request, pk, line_pk):
+    doc  = get_object_or_404(DeliveryDocument, pk=pk, tenant=request.tenant)
+    line = get_object_or_404(DeliveryLine, pk=line_pk, document=doc)
+
+    from apps.catalog.forms import IngredientForm
+
+    if request.method == "POST":
+        data = request.POST.copy()
+        data.setdefault("net_weight_kg", "1")
+        data.setdefault("net_volume_l", "1")
+        data.setdefault("pieces_per_package", "1")
+        data.setdefault("packages_per_purchase_unit", "1")
+        data.setdefault("yield_rate", "100")
+        form = IngredientForm(data, request.FILES)
+        if form.is_valid():
+            ingredient = form.save(commit=False)
+            ingredient.tenant = request.tenant
+            ingredient.save()
+
+            if doc.supplier:
+                from apps.purchasing.models import SupplierIngredient
+                SupplierIngredient.objects.get_or_create(
+                    supplier=doc.supplier,
+                    ingredient=ingredient,
+                    defaults={
+                        "supplier_item_name": line.raw_label[:100],
+                        "negotiated_price":   line.unit_price_ht or 0,
+                        "is_preferred":       True,
+                    }
+                )
+
+            line.matched_ingredient = ingredient
+            line.match_score        = 100.0
+            line.match_confirmed    = True
+            line.save(update_fields=["matched_ingredient", "match_score", "match_confirmed"])
+
+            _save_label_mapping(line, ingredient, request.tenant)
+
+            if line.unit_price_ht:
+                from apps.pricing.models import PriceRecord
+                from django.utils import timezone
+                PriceRecord.objects.create(
+                    tenant     = request.tenant,
+                    ingredient = ingredient,
+                    channel    = "purchase",
+                    price_ht   = line.unit_price_ht,
+                    valid_from = doc.document_date or timezone.localdate(),
+                    source     = "ocr_bl",
+                    notes      = f"Créé depuis {doc}",
+                )
+
+            messages.success(request, f"Ingrédient « {ingredient.name} » créé et associé.")
+            return redirect("purchasing:document_detail", pk=doc.pk)
+
+    else:
+        form = IngredientForm(initial={
+            "name":          line.raw_label[:100],
+            "purchase_unit": line.unit or "pièce",
+            "use_unit":      line.unit or "pièce",
+        })
+
+    return render(request, "purchasing/ingredient_create_from_line.html", {
+        "form": form,
+        "line": line,
+        "doc":  doc,
+    })
