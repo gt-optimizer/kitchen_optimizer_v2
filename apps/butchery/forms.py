@@ -88,6 +88,7 @@ class ButcherySessionForm(forms.ModelForm):
             "notes":                forms.Textarea(attrs={"class": "form-control", "rows": 2}),
         }
 
+
     def __init__(self, *args, tenant=None, **kwargs):
         super().__init__(*args, **kwargs)
         if tenant:
@@ -148,6 +149,10 @@ class ButcheryLineForm(forms.ModelForm):
         self.fields["byproduct_selling_price"].required = False
         self.fields["byproduct_sold"].required = False
         self.fields["template_line"].required = False
+        self.fields["vat_rate"].required = False
+        self.fields["vat_rate"].initial = "0.0550"
+        self.fields["order"].required = False
+        self.fields["order"].initial = 0
 
         if session:
             qs = ButcheryLine.objects.filter(

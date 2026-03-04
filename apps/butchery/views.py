@@ -229,7 +229,11 @@ def session_validate(request, pk):
 def session_line_add(request, pk):
     session = get_object_or_404(ButcherySession, pk=pk, tenant=request.tenant)
     if request.method == "POST":
-        form = ButcheryLineForm(request.POST, session=session)
+        data = request.POST.copy()
+        data.setdefault("vat_rate", "0.0550")
+        data.setdefault("order", "0")
+        form = ButcheryLineForm(data, session=session)
+        print("ERRORS:", form.errors)
         if form.is_valid():
             line = form.save(commit=False)
             line.session = session
@@ -258,6 +262,7 @@ def session_line_edit(request, pk, line_pk):
     line    = get_object_or_404(ButcheryLine, pk=line_pk, session=session)
     if request.method == "POST":
         form = ButcheryLineForm(request.POST, instance=line, session=session)
+        print("ERRORS:", form.errors)
         if form.is_valid():
             form.save()
             return redirect("butchery:session_detail", pk=pk)

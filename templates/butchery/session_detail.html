@@ -22,11 +22,13 @@
           <i class="fa-solid fa-flag-checkered"></i> Terminer
         </button>
       </form>
-    {% elif session.status == "completed" %}
+    {% endif %}
+    {% if session.status in "completed,validated" %}
       <form method="post" action="{% url 'butchery:session_validate' session.pk %}">
         {% csrf_token %}
         <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-calculator"></i> Calculer les prix
+          <i class="fa-solid fa-calculator"></i>
+          {% if session.status == "validated" %}Recalculer{% else %}Calculer les prix{% endif %}
         </button>
       </form>
     {% endif %}
@@ -109,11 +111,9 @@
         </h5>
       </div>
       <div class="card-body">
-        <form method="post"
-              action="{% url 'butchery:session_line_add' session.pk %}"
-              hx-post="{% url 'butchery:session_line_add' session.pk %}"
-              hx-target="#session-lines"
-              hx-swap="innerHTML">
+        <form hx-post="{% url 'butchery:session_line_add' session.pk %}"
+            hx-target="#session-lines"
+            hx-swap="innerHTML">
           {% csrf_token %}
           <div class="row g-2">
             <div class="col-12">
