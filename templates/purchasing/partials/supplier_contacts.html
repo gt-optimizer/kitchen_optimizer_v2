@@ -1,0 +1,66 @@
+{% if contacts %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Fonction</th>
+        <th>Téléphone</th>
+        <th>Email</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for contact in contacts %}
+      <tr>
+        <td class="fw-600">{{ contact.first_name }} {{ contact.last_name }}</td>
+        <td class="text-muted">{{ contact.job_title|default:"—" }}</td>
+        <td>
+          {% if contact.mobile %}
+          <a href="tel:{{ contact.mobile }}" class="text-decoration-none d-block" style="color:var(--color-text-secondary);">
+            <i class="fa-solid fa-mobile fa-xs me-1"></i>{{ contact.mobile }}
+          </a>
+          {% endif %}
+          {% if contact.phone %}
+          <a href="tel:{{ contact.phone }}" class="text-decoration-none d-block" style="color:var(--color-text-secondary);">
+            <i class="fa-solid fa-phone fa-xs me-1"></i>{{ contact.phone }}
+          </a>
+          {% endif %}
+          {% if not contact.mobile and not contact.phone %}—{% endif %}
+        </td>
+        <td>
+          {% if contact.email %}
+          <a href="mailto:{{ contact.email }}" class="text-decoration-none" style="color:var(--color-text-secondary);">
+            {{ contact.email }}
+          </a>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'purchasing:supplier_contact_edit' supplier.pk contact.pk %}"
+                    hx-target="#contact-drawer-body"
+                    hx-on::after-request="document.getElementById('contactDrawer').classList.add('open')"
+                    title="Modifier">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'purchasing:supplier_contact_delete' supplier.pk contact.pk %}"
+                    hx-target="#contacts-list"
+                    hx-confirm="Supprimer ce contact ?"
+                    title="Supprimer">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-address-book fa-2x mb-3 d-block" style="color: var(--color-text-disabled);"></i>
+  Aucun contact renseigné.
+</div>
+{% endif %}

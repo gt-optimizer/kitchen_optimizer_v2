@@ -1,0 +1,21 @@
+{% load widget_tweaks %}
+<form hx-post="{{ form_action }}" hx-target="#storage-list" hx-swap="innerHTML">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Nom *</label>
+      {% render_field form.name class="form-control" placeholder="Ex: Frigo 1, Congélateur bac, Réserve sèche..." %}
+      {% if form.name.errors %}<div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.name.errors.0 }}</div>{% endif %}
+    </div>
+    <div class="col-12">
+      <label class="form-label">Température *</label>
+      {% render_field form.temperature class="form-select" %}
+    </div>
+    <div class="col-12 d-flex align-items-center gap-2">
+      {% render_field form.is_active %}
+      <label class="form-label mb-0">Actif</label>
+    </div>
+  </div>
+  <hr class="divider mt-4">
+  <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Enregistrer</button>
+</form>

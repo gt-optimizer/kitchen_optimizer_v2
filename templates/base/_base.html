@@ -7,40 +7,109 @@
   <meta name="description" content="L'Atelier — Gestion de production">
   <title>{% block title %}L'Atelier{% endblock %}</title>
 
-  <!-- Bootstrap 5 -->
   <link rel="stylesheet" href="/static/vendors/bootstrap/css/bootstrap.min.css">
-  <!-- FontAwesome 7 -->
   <link rel="stylesheet" href="/static/vendors/fontawesome/css/all.min.css">
-  <!-- Charte L'Atelier -->
   <link rel="stylesheet" href="/static/css/charte.css">
 
   {% block extra_css %}{% endblock %}
 
   <style>
-.dropdown-menu {
+/* ── Dropdowns navbar (Alpine.js, pas Bootstrap) ─────────── */
+.nav-dropdown {
+  position: relative;
+}
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 210px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   padding: var(--space-2) 0;
-  min-width: 200px;
+  z-index: 1100;
 }
-.dropdown-item {
+.nav-dropdown-menu.align-end {
+  left: auto;
+  right: 0;
+}
+.nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-secondary);
   padding: var(--space-2) var(--space-4);
+  text-decoration: none;
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: pointer;
 }
-.dropdown-item:hover {
+.nav-dropdown-item:hover {
   background: var(--color-primary-faint);
   color: var(--color-primary);
 }
-.dropdown-toggle::after {
-  margin-left: var(--space-1);
+.nav-dropdown-item.danger { color: var(--color-danger); }
+.nav-dropdown-item.danger:hover { background: var(--color-danger-bg); }
+.nav-dropdown-divider {
+  border: none;
+  border-top: 1px solid var(--color-border-light);
+  margin: var(--space-1) 0;
 }
-.atelier-nav-link.dropdown-toggle {
-  user-select: none;
+.nav-dropdown-header {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  padding: var(--space-2) var(--space-4) var(--space-1);
+}
+
+/* ── Badge site actif ────────────────────────────────────── */
+.site-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-xlight);
+  border: 1px solid var(--color-border);
+  padding: 3px var(--space-3);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sous-menu drawer mobile ─────────────────────────────── */
+.mobile-submenu {
+  border-top: 1px solid var(--color-border-light);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+}
+.mobile-submenu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+.mobile-submenu-item:hover {
+  background: var(--color-primary-faint);
+  color: var(--color-primary);
 }
 </style>
 </head>
@@ -48,127 +117,142 @@
 
 <!-- ── Navbar bureau ──────────────────────────────────────── -->
 <nav class="app-navbar">
+
+  <!-- Logo -->
   <a href="{% url 'dashboard' %}" class="navbar-brand">
-    <img src="{% static 'images/logo_sans_fond.png' %}" alt="L'Atelier" style="height: 36px; width: auto;">
+    <img src="{% static 'images/logo_sans_fond.png' %}" alt="L'Atelier" style="height:34px;width:auto;">
     L'Atelier
   </a>
 
-  <div class="d-none d-md-flex align-items-center gap-1 flex-grow-1 ms-4">
-    {% if user.is_authenticated %}
-      {% if perms_catalog %}
-      <div class="dropdown">
-        <a href="#" class="atelier-nav-link {% block nav_catalog %}{% endblock %} dropdown-toggle"
-           data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="fa-solid fa-book-open"></i> Catalogue
-        </a>
-        <ul class="dropdown-menu">
-          <li>
-            <a class="dropdown-item" href="{% url 'catalog:ingredient_list' %}">
-              <i class="fa-solid fa-carrot me-2 text-primary"></i> Ingrédients
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'catalog:recipe_list' %}">
-              <i class="fa-solid fa-utensils me-2 text-primary"></i> Recettes
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% endif %}
-      {% if perms_purchasing %}
-      <div class="dropdown">
-        <a href="#" class="atelier-nav-link {% block nav_purchasing %}{% endblock %} dropdown-toggle"
-           data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="fa-solid fa-truck"></i> Achats
-        </a>
-        <ul class="dropdown-menu">
-          <li>
-            <a class="dropdown-item" href="{% url 'purchasing:document_list' %}">
-              <i class="fa-solid fa-file-invoice me-2 text-primary"></i> BL & Factures
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item" href="{% url 'purchasing:supplier_list' %}">
-              <i class="fa-solid fa-truck me-2 text-primary"></i> Fournisseurs
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% endif %}
-      {% if perms_catalog %}
-      <div class="dropdown">
-        <a href="#" class="atelier-nav-link {% block nav_butchery %}{% endblock %} dropdown-toggle"
-           data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="fa-solid fa-cow"></i> Boucherie
-        </a>
-        <ul class="dropdown-menu">
-          <li><a class="dropdown-item" href="{% url 'butchery:session_list' %}"><i class="fa-solid fa-knife-kitchen me-2 text-primary"></i> Sessions</a></li>
-          <li><a class="dropdown-item" href="{% url 'butchery:template_list' %}"><i class="fa-solid fa-sitemap me-2 text-primary"></i> Gabarits</a></li>
-          <li><a class="dropdown-item" href="{% url 'butchery:yield_list' %}"><i class="fa-solid fa-chart-bar me-2 text-primary"></i> Rendements</a></li>
-        </ul>
-      </div>
-      {% endif %}
-      {% if perms_stock %}
-      <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
-        <i class="fa-solid fa-boxes-stacked"></i> Stock
-      </a>
-      {% endif %}
-      {% if perms_production %}
-      <a href="#" class="atelier-nav-link {% block nav_production %}{% endblock %}">
-        <i class="fa-solid fa-fire-burner"></i> Production
-      </a>
-      {% endif %}
-      {% if perms_planning %}
-      <a href="#" class="atelier-nav-link {% block nav_planning %}{% endblock %}">
-        <i class="fa-solid fa-calendar-days"></i> Planning
-      </a>
-      {% endif %}
-      {% if perms_pms %}
-      <a href="#" class="atelier-nav-link {% block nav_pms %}{% endblock %}">
-        <i class="fa-solid fa-shield-halved"></i> PMS
-      </a>
-      {% endif %}
-      {% if perms_sales %}
-      <a href="#" class="atelier-nav-link {% block nav_sales %}{% endblock %}">
-        <i class="fa-solid fa-chart-line"></i> CA
-      </a>
-      {% endif %}
-    {% endif %}
-  </div>
+  <!-- Liens métier — desktop uniquement (>= 992px) -->
+  {% if user.is_authenticated %}
+  <div class="d-none d-lg-flex align-items-center gap-1 flex-grow-1 ms-3">
 
-  <div class="d-flex align-items-center gap-3 ms-auto">
+    {% if perms_catalog %}
+    <div class="nav-dropdown" x-data="{ open: false }">
+      <button class="atelier-nav-link {% block nav_catalog %}{% endblock %}"
+              @click="open = !open" @click.away="open = false"
+              style="background:none;border:none;cursor:pointer;">
+        <i class="fa-solid fa-book-open"></i> Catalogue
+        <i class="fa-solid fa-chevron-down fa-xs ms-1" style="opacity:0.6"></i>
+      </button>
+      <div class="nav-dropdown-menu" x-show="open" x-transition @click="open = false">
+        <a class="nav-dropdown-item" href="{% url 'catalog:ingredient_list' %}">
+          <i class="fa-solid fa-carrot" style="color:var(--color-primary-light);width:16px"></i> Ingrédients
+        </a>
+        <a class="nav-dropdown-item" href="{% url 'catalog:recipe_list' %}">
+          <i class="fa-solid fa-utensils" style="color:var(--color-primary-light);width:16px"></i> Recettes
+        </a>
+        <hr class="nav-dropdown-divider">
+        <a class="nav-dropdown-item" href="{% url 'butchery:session_list' %}">
+          <i class="fa-solid fa-cow" style="color:var(--color-primary-light);width:16px"></i> Boucherie
+        </a>
+        <a class="nav-dropdown-item" href="{% url 'butchery:template_list' %}">
+          <i class="fa-solid fa-sitemap" style="color:var(--color-primary-light);width:16px"></i> Gabarits
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if perms_purchasing %}
+    <div class="nav-dropdown" x-data="{ open: false }">
+      <button class="atelier-nav-link {% block nav_purchasing %}{% endblock %}"
+              @click="open = !open" @click.away="open = false"
+              style="background:none;border:none;cursor:pointer;">
+        <i class="fa-solid fa-truck"></i> Achats
+        <i class="fa-solid fa-chevron-down fa-xs ms-1" style="opacity:0.6"></i>
+      </button>
+      <div class="nav-dropdown-menu" x-show="open" x-transition @click="open = false">
+        <a class="nav-dropdown-item" href="{% url 'purchasing:supplier_list' %}">
+          <i class="fa-solid fa-truck" style="color:var(--color-primary-light);width:16px"></i> Fournisseurs
+        </a>
+        <a class="nav-dropdown-item" href="{% url 'purchasing:document_list' %}">
+          <i class="fa-solid fa-file-invoice" style="color:var(--color-primary-light);width:16px"></i> BL & Factures
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if perms_stock %}
+    <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
+      <i class="fa-solid fa-boxes-stacked"></i> Stock
+    </a>
+    {% endif %}
+
+    {% if perms_production %}
+    <a href="#" class="atelier-nav-link {% block nav_production %}{% endblock %}">
+      <i class="fa-solid fa-fire-burner"></i> Production
+    </a>
+    {% endif %}
+
+    {% if perms_planning %}
+    <a href="#" class="atelier-nav-link {% block nav_planning %}{% endblock %}">
+      <i class="fa-solid fa-calendar-days"></i> Planning
+    </a>
+    {% endif %}
+
+    {% if perms_pms %}
+    <a href="#" class="atelier-nav-link {% block nav_pms %}{% endblock %}">
+      <i class="fa-solid fa-shield-halved"></i> PMS
+      {% if pms_alerts_count %}<span class="badge badge-danger ms-1" style="font-size:10px;">{{ pms_alerts_count }}</span>{% endif %}
+    </a>
+    {% endif %}
+
+    {% if perms_sales %}
+    <a href="#" class="atelier-nav-link {% block nav_sales %}{% endblock %}">
+      <i class="fa-solid fa-chart-line"></i> CA
+    </a>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+  <!-- Zone droite : site actif + avatar -->
+  <div class="d-flex align-items-center gap-2 ms-auto">
     {% if user.is_authenticated %}
+
       {% if current_company %}
-      <span class="badge badge-primary d-none d-md-inline-flex">
-        <i class="fa-solid fa-store"></i> {{ current_company.name }}
+      <span class="site-badge d-none d-md-inline-flex">
+        <i class="fa-solid fa-store fa-xs"></i>
+        <span style="overflow:hidden;text-overflow:ellipsis;">{{ current_company.name }}</span>
       </span>
       {% endif %}
 
-      <div class="dropdown" x-data="{ open: false }">
+      <!-- Menu utilisateur — Alpine.js uniquement, pas Bootstrap -->
+      <div class="nav-dropdown" x-data="{ open: false }">
         <button class="navbar-user" @click="open = !open" @click.away="open = false">
           <div class="navbar-avatar">
             {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
           </div>
-          <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+          <span class="d-none d-md-inline" style="font-size:var(--font-size-sm);">
+            {{ user.get_full_name|default:user.username }}
+          </span>
           <i class="fa-solid fa-chevron-down fa-xs d-none d-md-inline"></i>
         </button>
-        <div class="dropdown-menu dropdown-menu-end shadow-sm"
-             x-show="open" x-transition
-             style="display:none; min-width:200px;">
-          <a class="dropdown-item text-danger" href="{% url 'logout' %}">
-            <i class="fa-solid fa-right-from-bracket fa-fw me-2"></i> Déconnexion
+
+        <div class="nav-dropdown-menu align-end" x-show="open" x-transition @click="open = false">
+          {% if perms_company %}
+          <div class="nav-dropdown-header">Administration</div>
+          <a class="nav-dropdown-item" href="{% url 'company:company_list' %}">
+            <i class="fa-solid fa-store" style="color:var(--color-primary-light);width:16px"></i> Sites & équipes
+          </a>
+          <hr class="nav-dropdown-divider">
+          {% endif %}
+          <a class="nav-dropdown-item danger" href="{% url 'logout' %}">
+            <i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Déconnexion
           </a>
         </div>
       </div>
+
     {% endif %}
   </div>
+
 </nav>
 
 <!-- ── Contenu principal ──────────────────────────────────── -->
 <div class="app-layout">
   <main class="app-content" id="main-content">
 
-    <!-- Messages Django (succès, erreurs...) -->
     {% if messages %}
     <div id="messages" class="mb-4">
       {% for message in messages %}
@@ -195,46 +279,35 @@
 <nav class="bottom-nav">
   <div class="bottom-nav-items">
 
-    <a href="{% url 'dashboard' %}"
-       class="bottom-nav-item {% block bottom_home %}{% endblock %}">
+    <a href="{% url 'dashboard' %}" class="bottom-nav-item {% block bottom_home %}{% endblock %}">
       <i class="fa-solid fa-house"></i>
       <span>Accueil</span>
     </a>
 
     {% if perms_production %}
-    <a href="#"
-       class="bottom-nav-item {% block bottom_production %}{% endblock %}">
+    <a href="#" class="bottom-nav-item {% block bottom_production %}{% endblock %}">
       <i class="fa-solid fa-fire-burner"></i>
       <span>Production</span>
     </a>
     {% endif %}
 
     {% if perms_pms %}
-    <a href="#"
-       class="bottom-nav-item {% block bottom_pms %}{% endblock %}">
+    <a href="#" class="bottom-nav-item {% block bottom_pms %}{% endblock %}">
       <i class="fa-solid fa-shield-halved"></i>
       <span>PMS</span>
-      {% if pms_alerts_count %}
-      <span class="badge-dot"></span>
-      {% endif %}
+      {% if pms_alerts_count %}<span class="badge-dot"></span>{% endif %}
     </a>
     {% endif %}
 
-      {% if perms_stock %}
-    <a href="#"
-       class="bottom-nav-item {% block bottom_stock %}{% endblock %}">
+    {% if perms_stock %}
+    <a href="#" class="bottom-nav-item {% block bottom_stock %}{% endblock %}">
       <i class="fa-solid fa-boxes-stacked"></i>
       <span>Stock</span>
-      {% if stock_alerts_count %}
-      <span class="badge-dot"></span>
-      {% endif %}
+      {% if stock_alerts_count %}<span class="badge-dot"></span>{% endif %}
     </a>
     {% endif %}
 
-    <!-- "Plus" → ouvre un menu drawer avec le reste -->
-    <button class="bottom-nav-item"
-            x-data
-            @click="$dispatch('open-more-menu')">
+    <button class="bottom-nav-item" x-data @click="$dispatch('open-more-menu')">
       <i class="fa-solid fa-bars"></i>
       <span>Plus</span>
     </button>
@@ -242,84 +315,134 @@
   </div>
 </nav>
 
-<!-- Drawer "Plus" mobile -->
-<div x-data="{ open: false }"
-     @open-more-menu.window="open = true"
+<!-- ══ Drawer "Plus" mobile — avec sous-menus ════════════════ -->
+<div x-data="{
+       open: false,
+       sub: null,
+       openSub(name) { this.sub = this.sub === name ? null : name; }
+     }"
+     @open-more-menu.window="open = true; sub = null"
      @keydown.escape.window="open = false">
 
   <!-- Overlay -->
-  <div x-show="open"
-       x-transition.opacity
-       @click="open = false"
+  <div x-show="open" x-transition.opacity @click="open = false"
        class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-25"
-       style="z-index: 1050; display:none;"></div>
+       style="z-index:1050;display:none;"></div>
 
-  <!-- Drawer -->
+  <!-- Drawer panel -->
   <div x-show="open"
        x-transition:enter="transition ease-out duration-200"
        x-transition:enter-start="translate-y-full"
        x-transition:enter-end="translate-y-0"
        class="position-fixed bottom-0 start-0 end-0 bg-white rounded-top-4 p-4"
-       style="z-index: 1060; display:none; padding-bottom: calc(1.5rem + env(safe-area-inset-bottom))">
+       style="z-index:1060;display:none;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom));max-height:80vh;overflow-y:auto;">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <span class="fw-bold" style="font-family: var(--font-title)">Menu</span>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <span class="fw-bold" style="font-family:var(--font-title)">Menu</span>
       <button @click="open = false" class="btn btn-ghost btn-icon">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
     <div class="row g-3">
+
       {% if perms_catalog %}
       <div class="col-4">
-        <a href="#" @click="open = false"
-           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
-           style="background: var(--color-primary-faint); color: var(--color-primary)">
+        <button @click="openSub('catalog')"
+                class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 w-100 border-0"
+                :style="sub === 'catalog' ? 'background:var(--color-primary-xlight);color:var(--color-primary-dark)' : 'background:var(--color-primary-faint);color:var(--color-primary)'">
           <i class="fa-solid fa-book-open fa-lg"></i>
-          <span style="font-size: var(--font-size-xs); font-weight: 600">Catalogue</span>
-        </a>
+          <span style="font-size:var(--font-size-xs);font-weight:600">Catalogue</span>
+        </button>
       </div>
       {% endif %}
+
       {% if perms_purchasing %}
       <div class="col-4">
-        <a href="#" @click="open = false"
-           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
-           style="background: var(--color-primary-faint); color: var(--color-primary)">
+        <button @click="openSub('purchasing')"
+                class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 w-100 border-0"
+                :style="sub === 'purchasing' ? 'background:var(--color-primary-xlight);color:var(--color-primary-dark)' : 'background:var(--color-primary-faint);color:var(--color-primary)'">
           <i class="fa-solid fa-truck fa-lg"></i>
-          <span style="font-size: var(--font-size-xs); font-weight: 600">Achats</span>
-        </a>
+          <span style="font-size:var(--font-size-xs);font-weight:600">Achats</span>
+        </button>
       </div>
       {% endif %}
+
       {% if perms_planning %}
       <div class="col-4">
         <a href="#" @click="open = false"
            class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
-           style="background: var(--color-primary-faint); color: var(--color-primary)">
+           style="background:var(--color-primary-faint);color:var(--color-primary)">
           <i class="fa-solid fa-calendar-days fa-lg"></i>
-          <span style="font-size: var(--font-size-xs); font-weight: 600">Planning</span>
+          <span style="font-size:var(--font-size-xs);font-weight:600">Planning</span>
         </a>
       </div>
       {% endif %}
+
       {% if perms_sales %}
       <div class="col-4">
         <a href="#" @click="open = false"
            class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
-           style="background: var(--color-primary-faint); color: var(--color-primary)">
+           style="background:var(--color-primary-faint);color:var(--color-primary)">
           <i class="fa-solid fa-chart-line fa-lg"></i>
-          <span style="font-size: var(--font-size-xs); font-weight: 600">CA</span>
+          <span style="font-size:var(--font-size-xs);font-weight:600">CA</span>
         </a>
       </div>
       {% endif %}
+
+      {% if perms_company %}
+      <div class="col-4">
+        <a href="{% url 'company:company_list' %}" @click="open = false"
+           class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
+           style="background:var(--color-primary-faint);color:var(--color-primary)">
+          <i class="fa-solid fa-store fa-lg"></i>
+          <span style="font-size:var(--font-size-xs);font-weight:600">Sites</span>
+        </a>
+      </div>
+      {% endif %}
+
       <div class="col-4">
         <a href="{% url 'logout' %}" @click="open = false"
            class="d-flex flex-column align-items-center gap-2 p-3 rounded-3 text-decoration-none"
-           style="background: var(--color-danger-bg); color: var(--color-danger)">
+           style="background:var(--color-danger-bg);color:var(--color-danger)">
           <i class="fa-solid fa-right-from-bracket fa-lg"></i>
-          <span style="font-size: var(--font-size-xs); font-weight: 600">Déconnexion</span>
+          <span style="font-size:var(--font-size-xs);font-weight:600">Déconnexion</span>
         </a>
       </div>
+
+    </div><!-- /row -->
+
+    <!-- Sous-menu Catalogue -->
+    {% if perms_catalog %}
+    <div x-show="sub === 'catalog'" x-transition class="mobile-submenu">
+      <a href="{% url 'catalog:ingredient_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-carrot" style="color:var(--color-primary-light);width:20px"></i> Ingrédients
+      </a>
+      <a href="{% url 'catalog:recipe_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-utensils" style="color:var(--color-primary-light);width:20px"></i> Recettes
+      </a>
+      <a href="{% url 'butchery:session_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-cow" style="color:var(--color-primary-light);width:20px"></i> Boucherie
+      </a>
+      <a href="{% url 'butchery:template_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-sitemap" style="color:var(--color-primary-light);width:20px"></i> Gabarits
+      </a>
     </div>
-  </div>
+    {% endif %}
+
+    <!-- Sous-menu Achats -->
+    {% if perms_purchasing %}
+    <div x-show="sub === 'purchasing'" x-transition class="mobile-submenu">
+      <a href="{% url 'purchasing:supplier_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-truck" style="color:var(--color-primary-light);width:20px"></i> Fournisseurs
+      </a>
+      <a href="{% url 'purchasing:document_list' %}" @click="open = false" class="mobile-submenu-item">
+        <i class="fa-solid fa-file-invoice" style="color:var(--color-primary-light);width:20px"></i> BL & Factures
+      </a>
+    </div>
+    {% endif %}
+
+  </div><!-- /drawer panel -->
 </div>
 {% endif %}
 
@@ -331,7 +454,6 @@
 {% block extra_js %}{% endblock %}
 
 <script>
-  // HTMX — envoie le token CSRF dans tous les headers
   document.addEventListener("htmx:configRequest", function(evt) {
     evt.detail.headers["X-CSRFToken"] = "{{ csrf_token }}";
   });

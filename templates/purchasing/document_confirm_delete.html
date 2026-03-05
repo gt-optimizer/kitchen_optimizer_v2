@@ -1,0 +1,64 @@
+{% extends "base/_base.html" %}
+{% block title %}Supprimer le document — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'purchasing:document_detail' doc.pk %}" class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-trash"></i> Supprimer le document
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-body" style="padding: var(--space-8);">
+
+        <div class="alert alert-danger mb-4">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div>
+            <strong>Action irréversible.</strong> Le document et toutes ses lignes OCR seront supprimés.
+            Les prix déjà appliqués et les réceptions créées <strong>ne sont pas annulés</strong>.
+          </div>
+        </div>
+
+        <dl class="row mb-4" style="font-size: var(--font-size-sm);">
+          <dt class="col-4 text-muted fw-normal">Type</dt>
+          <dd class="col-8">{{ doc.get_document_type_display }}</dd>
+
+          <dt class="col-4 text-muted fw-normal">Fournisseur</dt>
+          <dd class="col-8">{{ doc.supplier|default:"—" }}</dd>
+
+          <dt class="col-4 text-muted fw-normal">Référence</dt>
+          <dd class="col-8">{{ doc.reference|default:"—" }}</dd>
+
+          <dt class="col-4 text-muted fw-normal">Date</dt>
+          <dd class="col-8">{{ doc.document_date|date:"d/m/Y"|default:"—" }}</dd>
+
+          <dt class="col-4 text-muted fw-normal">Statut</dt>
+          <dd class="col-8">{{ doc.get_status_display }}</dd>
+
+          <dt class="col-4 text-muted fw-normal">Lignes</dt>
+          <dd class="col-8">{{ doc.lines.count }} ligne{{ doc.lines.count|pluralize }}</dd>
+        </dl>
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-3">
+            <button type="submit" class="btn btn-danger">
+              <i class="fa-solid fa-trash"></i> Confirmer la suppression
+            </button>
+            <a href="{% url 'purchasing:document_detail' doc.pk %}" class="btn btn-ghost">
+              Annuler
+            </a>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% if equipment_list %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Équipement</th>
+        <th>Capacité</th>
+        <th class="hide-mobile">Description</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for eq in equipment_list %}
+      <tr>
+        <td class="fw-600">{{ eq.name }}</td>
+        <td>
+          <span style="font-family:var(--font-title); font-weight:600;">{{ eq.capacity }}</span>
+          <span class="text-muted">{{ eq.get_capacity_unit_display }}</span>
+        </td>
+        <td class="hide-mobile text-muted">{{ eq.description|default:"—" }}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'company:equipment_edit' company.pk eq.pk %}"
+                    hx-target="#equipment-drawer-body"
+                    hx-on::after-request="document.getElementById('equipmentDrawer').classList.add('open')"
+                    title="Modifier">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'company:equipment_delete' company.pk eq.pk %}"
+                    hx-target="#equipment-list"
+                    hx-confirm="Désactiver {{ eq.name }} ?"
+                    title="Désactiver">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-blender fa-2x mb-3 d-block" style="color:var(--color-text-disabled);"></i>
+  Aucun équipement enregistré.
+</div>
+{% endif %}

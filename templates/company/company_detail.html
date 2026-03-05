@@ -1,0 +1,290 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ company.name }} — L'Atelier{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <a href="{% url 'company:company_list' %}" class="btn btn-ghost btn-icon">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <div>
+      <h1 class="page-title mb-1">
+        <i class="fa-solid fa-store"></i> {{ company.name }}
+      </h1>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <span class="badge badge-info">{{ company.get_company_type_display }}</span>
+        {% if company.is_active %}
+        <span class="badge badge-success"><i class="fa-solid fa-circle fa-xs"></i> Actif</span>
+        {% else %}
+        <span class="badge badge-muted"><i class="fa-solid fa-circle fa-xs"></i> Inactif</span>
+        {% endif %}
+        {% if company.city %}
+        <span class="text-muted" style="font-size: var(--font-size-sm);">
+          <i class="fa-solid fa-location-dot fa-xs"></i> {{ company.zipcode }} {{ company.city }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <a href="{% url 'company:company_edit' company.pk %}" class="btn btn-secondary">
+    <i class="fa-solid fa-pen"></i> Modifier
+  </a>
+</div>
+
+<!-- Onglets -->
+<ul class="nav nav-tabs mb-4" id="companyTabs" role="tablist"
+    style="border-bottom: 2px solid var(--color-border);">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#pane-info"
+            type="button" style="font-family:var(--font-body);font-size:var(--font-size-sm);font-weight:500;">
+      <i class="fa-solid fa-circle-info me-1"></i> Infos
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-employees"
+            type="button" style="font-family:var(--font-body);font-size:var(--font-size-sm);font-weight:500;">
+      <i class="fa-solid fa-users me-1"></i> Employés
+      {% if employees %}<span class="badge badge-primary ms-1">{{ employees|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-equipment"
+            type="button" style="font-family:var(--font-body);font-size:var(--font-size-sm);font-weight:500;">
+      <i class="fa-solid fa-blender me-1"></i> Équipements
+      {% if equipment_list %}<span class="badge badge-primary ms-1">{{ equipment_list|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-storage"
+            type="button" style="font-family:var(--font-body);font-size:var(--font-size-sm);font-weight:500;">
+      <i class="fa-solid fa-temperature-low me-1"></i> Stockage
+      {% if storage_places %}<span class="badge badge-primary ms-1">{{ storage_places|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pane-roles"
+            type="button" style="font-family:var(--font-body);font-size:var(--font-size-sm);font-weight:500;">
+      <i class="fa-solid fa-user-shield me-1"></i> Accès
+      {% if user_roles %}<span class="badge badge-primary ms-1">{{ user_roles|length }}</span>{% endif %}
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  <!-- ── Infos ── -->
+  <div class="tab-pane fade show active" id="pane-info">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fa-solid fa-building"></i> Coordonnées</span></div>
+          <div class="card-body">
+            <dl class="row mb-0" style="font-size:var(--font-size-sm);">
+              {% if company.address %}
+              <dt class="col-5 text-muted fw-normal">Adresse</dt>
+              <dd class="col-7">{{ company.address }}<br>{{ company.zipcode }} {{ company.city }}</dd>
+              {% endif %}
+              {% if company.phone %}
+              <dt class="col-5 text-muted fw-normal">Téléphone</dt>
+              <dd class="col-7"><a href="tel:{{ company.phone }}" class="text-decoration-none">{{ company.phone }}</a></dd>
+              {% endif %}
+              {% if company.email %}
+              <dt class="col-5 text-muted fw-normal">Email</dt>
+              <dd class="col-7"><a href="mailto:{{ company.email }}" class="text-decoration-none">{{ company.email }}</a></dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header"><span class="card-title"><i class="fa-solid fa-scale-balanced"></i> Infos légales</span></div>
+          <div class="card-body">
+            <dl class="row mb-0" style="font-size:var(--font-size-sm);">
+              {% if company.siret %}
+              <dt class="col-5 text-muted fw-normal">SIRET</dt>
+              <dd class="col-7" style="font-family:monospace;">{{ company.siret }}</dd>
+              {% endif %}
+              {% if company.vat_number %}
+              <dt class="col-5 text-muted fw-normal">N° TVA</dt>
+              <dd class="col-7" style="font-family:monospace;">{{ company.vat_number }}</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Employés ── -->
+  <div class="tab-pane fade" id="pane-employees">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'company:employee_add' company.pk %}"
+              hx-target="#employee-drawer-body"
+              hx-on::after-request="document.getElementById('employeeDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Ajouter un employé
+      </button>
+    </div>
+    <div class="card" id="employees-list">
+      {% include "company/partials/employee_list.html" %}
+    </div>
+  </div>
+
+  <!-- ── Équipements ── -->
+  <div class="tab-pane fade" id="pane-equipment">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'company:equipment_add' company.pk %}"
+              hx-target="#equipment-drawer-body"
+              hx-on::after-request="document.getElementById('equipmentDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Ajouter un équipement
+      </button>
+    </div>
+    <div class="card" id="equipment-list">
+      {% include "company/partials/equipment_list.html" %}
+    </div>
+  </div>
+
+  <!-- ── Stockage ── -->
+  <div class="tab-pane fade" id="pane-storage">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'company:storage_add' company.pk %}"
+              hx-target="#storage-drawer-body"
+              hx-on::after-request="document.getElementById('storageDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Ajouter un lieu
+      </button>
+    </div>
+    <div class="card" id="storage-list">
+      {% include "company/partials/storage_list.html" %}
+    </div>
+  </div>
+
+  <!-- ── Accès / Rôles ── -->
+  <div class="tab-pane fade" id="pane-roles">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'company:userrole_add' company.pk %}"
+              hx-target="#userrole-drawer-body"
+              hx-on::after-request="document.getElementById('userroleDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Ajouter un accès
+      </button>
+    </div>
+    <div class="card" id="userroles-list">
+      {% include "company/partials/userrole_list.html" %}
+    </div>
+  </div>
+
+</div><!-- /tab-content -->
+
+
+<!-- ══ DRAWERS ════════════════════════════════════════════ -->
+
+{% for drawer_id, drawer_target, drawer_title in drawers_config %}
+<div id="{{ drawer_id }}" class="atelier-drawer">
+  <div class="atelier-drawer-overlay" onclick="document.getElementById('{{ drawer_id }}').classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title">{{ drawer_title }}</span>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('{{ drawer_id }}').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="{{ drawer_target }}" class="atelier-drawer-body"></div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Drawers définis manuellement pour éviter la logique template -->
+<div id="employeeDrawer" class="atelier-drawer">
+  <div class="atelier-drawer-overlay" onclick="this.parentElement.classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title">Employé</span>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('employeeDrawer').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="employee-drawer-body" class="atelier-drawer-body"></div>
+  </div>
+</div>
+
+<div id="equipmentDrawer" class="atelier-drawer">
+  <div class="atelier-drawer-overlay" onclick="this.parentElement.classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title">Équipement</span>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('equipmentDrawer').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="equipment-drawer-body" class="atelier-drawer-body"></div>
+  </div>
+</div>
+
+<div id="storageDrawer" class="atelier-drawer">
+  <div class="atelier-drawer-overlay" onclick="this.parentElement.classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title">Lieu de stockage</span>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('storageDrawer').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="storage-drawer-body" class="atelier-drawer-body"></div>
+  </div>
+</div>
+
+<div id="userroleDrawer" class="atelier-drawer">
+  <div class="atelier-drawer-overlay" onclick="this.parentElement.classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title">Accès utilisateur</span>
+      <button class="btn btn-ghost btn-icon" onclick="document.getElementById('userroleDrawer').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="userrole-drawer-body" class="atelier-drawer-body"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.atelier-drawer { position:fixed; inset:0; z-index:1080; pointer-events:none; }
+.atelier-drawer.open { pointer-events:auto; }
+.atelier-drawer-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.25); opacity:0; transition:opacity var(--transition-base); }
+.atelier-drawer.open .atelier-drawer-overlay { opacity:1; }
+.atelier-drawer-panel { position:absolute; top:0; right:0; bottom:0; width:440px; max-width:100vw; background:var(--color-surface); box-shadow:var(--shadow-lg); display:flex; flex-direction:column; transform:translateX(100%); transition:transform var(--transition-base); }
+.atelier-drawer.open .atelier-drawer-panel { transform:translateX(0); }
+.atelier-drawer-header { display:flex; align-items:center; justify-content:space-between; padding:var(--space-4) var(--space-6); border-bottom:1px solid var(--color-border); }
+.atelier-drawer-title { font-family:var(--font-title); font-size:var(--font-size-lg); font-weight:600; }
+.atelier-drawer-body { flex:1; overflow-y:auto; padding:var(--space-6); }
+.nav-tabs .nav-link { color:var(--color-text-secondary); border:none; border-bottom:2px solid transparent; padding:var(--space-3) var(--space-4); border-radius:0; transition:all var(--transition-fast); }
+.nav-tabs .nav-link:hover { color:var(--color-primary); border-bottom-color:var(--color-primary-light); background:transparent; }
+.nav-tabs .nav-link.active { color:var(--color-primary); border-bottom:2px solid var(--color-primary); background:transparent; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  const targetId = evt.detail.target ? evt.detail.target.id : '';
+  const drawerMap = {
+    'employee-drawer-body':  'employeeDrawer',
+    'equipment-drawer-body': 'equipmentDrawer',
+    'storage-drawer-body':   'storageDrawer',
+    'userrole-drawer-body':  'userroleDrawer',
+  };
+  if (drawerMap[targetId]) {
+    document.getElementById(drawerMap[targetId]).classList.add('open');
+  }
+});
+
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+  const targetId = evt.detail.target ? evt.detail.target.id : '';
+  const listIds = ['employees-list', 'equipment-list', 'storage-list', 'userroles-list'];
+  if (listIds.includes(targetId)) {
+    ['employeeDrawer','equipmentDrawer','storageDrawer','userroleDrawer'].forEach(id => {
+      document.getElementById(id).classList.remove('open');
+    });
+  }
+});
+</script>
+{% endblock %}

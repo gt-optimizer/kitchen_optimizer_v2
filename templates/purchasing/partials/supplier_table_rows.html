@@ -1,0 +1,53 @@
+{% for supplier in suppliers %}
+<tr>
+  <td>
+    <a href="{% url 'purchasing:supplier_detail' supplier.pk %}"
+       class="fw-600 text-decoration-none"
+       style="color: var(--color-text); font-weight: 600;">
+      {{ supplier.name }}
+    </a>
+    {% if supplier.email %}
+    <div class="text-muted" style="font-size: var(--font-size-xs);">{{ supplier.email }}</div>
+    {% endif %}
+  </td>
+  <td class="hide-mobile">
+    {% if supplier.city %}{{ supplier.zipcode }} {{ supplier.city }}{% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+  <td class="hide-mobile">
+    {% if supplier.phone %}
+    <a href="tel:{{ supplier.phone }}" class="text-decoration-none" style="color: var(--color-text-secondary);">
+      {{ supplier.phone }}
+    </a>
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+  <td class="hide-mobile">
+    <span style="font-family: monospace; font-size: var(--font-size-xs); color: var(--color-text-muted);">
+      {{ supplier.siret|default:"—" }}
+    </span>
+  </td>
+  <td>
+    {% if supplier.is_active %}
+    <span class="badge badge-success"><i class="fa-solid fa-circle fa-xs"></i> Actif</span>
+    {% else %}
+    <span class="badge badge-muted"><i class="fa-solid fa-circle fa-xs"></i> Inactif</span>
+    {% endif %}
+  </td>
+  <td>
+    <div class="table-actions">
+      <a href="{% url 'purchasing:supplier_detail' supplier.pk %}" class="btn btn-ghost btn-icon btn-sm" title="Voir">
+        <i class="fa-solid fa-eye"></i>
+      </a>
+      <a href="{% url 'purchasing:supplier_edit' supplier.pk %}" class="btn btn-icon btn-sm" title="Modifier">
+        <i class="fa-solid fa-pen"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" class="text-center text-muted" style="padding: var(--space-8);">
+    <i class="fa-solid fa-truck fa-2x mb-3 d-block" style="color: var(--color-text-disabled);"></i>
+    Aucun fournisseur trouvé
+  </td>
+</tr>
+{% endfor %}

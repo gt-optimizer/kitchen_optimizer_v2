@@ -1,0 +1,54 @@
+{% if storage_places %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Lieu</th>
+        <th>Température</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sp in storage_places %}
+      <tr>
+        <td class="fw-600">{{ sp.name }}</td>
+        <td>
+          {% if sp.temperature == "frozen" %}
+          <span class="badge badge-info"><i class="fa-solid fa-snowflake fa-xs"></i> {{ sp.get_temperature_display }}</span>
+          {% elif sp.temperature == "cold_1" or sp.temperature == "cold_2" %}
+          <span class="badge badge-info"><i class="fa-solid fa-temperature-low fa-xs"></i> {{ sp.get_temperature_display }}</span>
+          {% elif sp.temperature == "cold_3" %}
+          <span class="badge badge-warning"><i class="fa-solid fa-temperature-half fa-xs"></i> {{ sp.get_temperature_display }}</span>
+          {% else %}
+          <span class="badge badge-muted"><i class="fa-solid fa-box fa-xs"></i> {{ sp.get_temperature_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'company:storage_edit' company.pk sp.pk %}"
+                    hx-target="#storage-drawer-body"
+                    hx-on::after-request="document.getElementById('storageDrawer').classList.add('open')"
+                    title="Modifier">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'company:storage_delete' company.pk sp.pk %}"
+                    hx-target="#storage-list"
+                    hx-confirm="Supprimer {{ sp.name }} ?"
+                    title="Supprimer">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-temperature-low fa-2x mb-3 d-block" style="color:var(--color-text-disabled);"></i>
+  Aucun lieu de stockage enregistré.
+</div>
+{% endif %}

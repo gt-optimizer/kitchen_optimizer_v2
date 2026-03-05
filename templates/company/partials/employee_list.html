@@ -1,0 +1,70 @@
+{% if employees %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Nom</th>
+        <th>Fonction</th>
+        <th>Téléphone</th>
+        {% if can_see_financials %}
+        <th class="hide-mobile">Coût/h</th>
+        <th class="hide-mobile">H/semaine</th>
+        {% endif %}
+        <th>Statut</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for emp in employees %}
+      <tr>
+        <td class="fw-600">{{ emp.first_name }} {{ emp.last_name }}</td>
+        <td class="text-muted">{{ emp.job_title|default:"—" }}</td>
+        <td>
+          {% if emp.phone %}
+          <a href="tel:{{ emp.phone }}" class="text-decoration-none" style="color:var(--color-text-secondary);">{{ emp.phone }}</a>
+          {% else %}—{% endif %}
+        </td>
+        {% if can_see_financials %}
+        <td class="hide-mobile">
+          {% if emp.hourly_cost %}{{ emp.hourly_cost|floatformat:2 }} €{% else %}—{% endif %}
+        </td>
+        <td class="hide-mobile">{{ emp.weekly_hours }}h</td>
+        {% endif %}
+        <td>
+          {% if emp.is_active %}
+          <span class="badge badge-success"><i class="fa-solid fa-circle fa-xs"></i> Actif</span>
+          {% else %}
+          <span class="badge badge-muted"><i class="fa-solid fa-circle fa-xs"></i> Inactif</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'company:employee_edit' company.pk emp.pk %}"
+                    hx-target="#employee-drawer-body"
+                    hx-on::after-request="document.getElementById('employeeDrawer').classList.add('open')"
+                    title="Modifier">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            {% if can_see_financials %}
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'company:employee_delete' company.pk emp.pk %}"
+                    hx-target="#employees-list"
+                    hx-confirm="Désactiver {{ emp.first_name }} {{ emp.last_name }} ?"
+                    title="Désactiver">
+              <i class="fa-solid fa-user-slash"></i>
+            </button>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-users fa-2x mb-3 d-block" style="color:var(--color-text-disabled);"></i>
+  Aucun employé enregistré.
+</div>
+{% endif %}

@@ -1,0 +1,72 @@
+{% if supplier_ingredients %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Ingrédient</th>
+        <th>Réf. fournisseur</th>
+        <th>Désignation fournisseur</th>
+        <th class="text-end">Prix négocié HT</th>
+        <th>Préféré</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for si in supplier_ingredients %}
+      <tr>
+        <td>
+          <a href="{% url 'catalog:ingredient_detail' si.ingredient.pk %}"
+             class="text-decoration-none fw-600" style="color: var(--color-text);">
+            {{ si.ingredient.name }}
+          </a>
+          {% if not si.is_active %}
+          <span class="badge badge-muted ms-1">Inactif</span>
+          {% endif %}
+        </td>
+        <td>
+          <span style="font-family: monospace; font-size: var(--font-size-xs);">
+            {{ si.supplier_item_number|default:"—" }}
+          </span>
+        </td>
+        <td class="text-muted">{{ si.supplier_item_name|default:"—" }}</td>
+        <td class="text-end fw-600">
+          {% if si.negotiated_price %}
+          {{ si.negotiated_price|floatformat:4 }} €
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if si.is_preferred %}
+          <span class="badge badge-success"><i class="fa-solid fa-star fa-xs"></i> Oui</span>
+          {% else %}
+          <span class="text-muted" style="font-size: var(--font-size-xs);">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-icon btn-sm"
+                    hx-get="{% url 'purchasing:supplier_ingredient_edit' supplier.pk si.pk %}"
+                    hx-target="#ingredient-drawer-body"
+                    hx-on::after-request="document.getElementById('ingredientDrawer').classList.add('open')"
+                    title="Modifier">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'purchasing:supplier_ingredient_delete' supplier.pk si.pk %}"
+                    hx-target="#supplier-ingredients-list"
+                    hx-confirm="Supprimer cette référence ?"
+                    title="Supprimer">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-carrot fa-2x mb-3 d-block" style="color: var(--color-text-disabled);"></i>
+  Aucun ingrédient lié à ce fournisseur.
+</div>
+{% endif %}

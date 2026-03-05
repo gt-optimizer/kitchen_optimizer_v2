@@ -22,16 +22,18 @@ def apply_document_prices(document) -> dict:
     tenant   = document.tenant
     supplier = document.supplier
     today    = timezone.localdate()
-    company = tenant.companies.first() if hasattr(tenant, 'companies') else None
 
-    reception = None
-    if company:
-        reception = Reception.objects.create(
-            company=company,
-            supplier=supplier,
-            delivery_date=document.document_date or today,
-            invoice_number=document.reference or "",
-        )
+    # ── Récupère le site (company) du tenant ──────────────────────────────
+    company = tenant.companies.first() if hasattr(tenant, 'companies') else None
+    if not company:
+        logger.error(f"apply_document_prices: aucun site (company) trouvé pour le tenant {tenant}")
+        return {
+            "applied":   0,
+            "skipped":   0,
+            "errors":    ["Aucun site configuré pour ce tenant — impossible de créer la réception."],
+            "changes":   [],
+            "reception": None,
+        }
 
     confirmed_lines = document.lines.filter(
         line_type="product",
@@ -42,20 +44,20 @@ def apply_document_prices(document) -> dict:
     ).select_related("matched_ingredient")
 
     if not confirmed_lines.exists():
-        return {"applied": 0, "skipped": 0, "errors": []}
+        return {"applied": 0, "skipped": 0, "errors": [], "changes": [], "reception": None}
 
-    # ── Crée la réception ─────────────────────────────────────────────────
+    # ── Crée la réception (une seule fois) ────────────────────────────────
     reception = Reception.objects.create(
-        company=tenant.companies.first(),  # premier site du tenant
+        company=company,
         supplier=supplier,
         delivery_date=document.document_date or today,
         invoice_number=document.reference or "",
     )
 
-    applied  = 0
-    skipped  = 0
-    errors   = []
-    changes  = []
+    applied = 0
+    skipped = 0
+    errors  = []
+    changes = []
 
     for line in confirmed_lines:
         ingredient = line.matched_ingredient
@@ -74,7 +76,7 @@ def apply_document_prices(document) -> dict:
             )
 
             # Crée le nouveau PriceRecord
-            new_record = PriceRecord.objects.create(
+            PriceRecord.objects.create(
                 tenant=tenant,
                 ingredient=ingredient,
                 channel="purchase",
@@ -102,10 +104,10 @@ def apply_document_prices(document) -> dict:
             line.save(update_fields=["reception_line", "applied"])
 
             # Calcule le delta prix
-            delta = None
+            delta     = None
             delta_pct = None
             if old_price:
-                delta = float(line.unit_price_ht) - float(old_price)
+                delta     = float(line.unit_price_ht) - float(old_price)
                 delta_pct = round(delta / float(old_price) * 100, 1)
 
             changes.append({

@@ -1,0 +1,102 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% if company %}{% url 'company:company_detail' company.pk %}{% else %}{% url 'company:company_list' %}{% endif %}"
+     class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-store"></i> {{ action }}
+  </h1>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-building"></i> Identité</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Raison sociale *</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Type</label>
+              {{ form.company_type }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Adresse</label>
+              {{ form.address }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Code postal</label>
+              {{ form.zipcode }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ville</label>
+              {{ form.city }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Téléphone</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-scale-balanced"></i> Informations légales</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">SIRET</label>
+              {{ form.siret }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">N° TVA</label>
+              {{ form.vat_number }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-toggle-on"></i> Statut</span>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" class="form-label mb-0">Site actif</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="d-flex gap-3 mt-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+    </button>
+    <a href="{% if company %}{% url 'company:company_detail' company.pk %}{% else %}{% url 'company:company_list' %}{% endif %}"
+       class="btn btn-ghost">Annuler</a>
+  </div>
+</form>
+{% endblock %}

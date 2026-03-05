@@ -56,8 +56,12 @@
           <td>
             <div class="table-actions">
               <a href="{% url 'purchasing:document_detail' doc.pk %}"
-                 class="btn btn-ghost btn-icon btn-sm">
+                 class="btn btn-ghost btn-icon btn-sm" title="Voir">
                 <i class="fa-solid fa-eye"></i>
+              </a>
+              <a href="{% url 'purchasing:document_delete' doc.pk %}"
+                 class="btn btn-danger btn-icon btn-sm" title="Supprimer">
+                <i class="fa-solid fa-trash"></i>
               </a>
             </div>
           </td>

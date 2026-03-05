@@ -58,7 +58,7 @@ SHIPPING_RE = re.compile('|'.join(SHIPPING_PATTERNS), re.IGNORECASE)
 
 # ── Pattern prix ──────────────────────────────────────────────────────────────
 PRICE_RE = re.compile(r'(\d{1,6}[.,]\d{2,4})')
-QTY_RE   = re.compile(r'(\d{1,6}[.,]\d{0,3})\s*(kg|g|l|litre|pièce|pce|pc|boite|bt|colis|col|sac)', re.IGNORECASE)
+QTY_RE = re.compile(r'(\d{1,6}[.,]\d{0,3})\s*(kg|g|l|litre|pièce|pce|pc|boite|bt|colis|col|sac)', re.IGNORECASE)
 
 
 def extract_text_from_pdf(filepath: str) -> list[dict]:
@@ -72,8 +72,8 @@ def extract_text_from_pdf(filepath: str) -> list[dict]:
         for i, page in enumerate(doc):
             text = page.get_text("text").strip()
             pages.append({
-                "page":     i + 1,
-                "text":     text,
+                "page": i + 1,
+                "text": text,
                 "has_text": len(text) > 50,  # < 50 chars = probablement une image
             })
         doc.close()
@@ -217,7 +217,7 @@ def parse_document_lines_via_llm(full_text: str) -> list[dict]:
     - unit_price_ht : prix unitaire HT numérique ou null
     - total_ht : total HT de la ligne numérique ou null
     - les données de traçabilité (numéros de lots, DLC ou DLUO ou DDM) ou null
-    
+
     Attention pour les articles au kg un nombre de pièces peut être mentionné, il faut trouver le bon poids.
     Vérifie la cohérence : quantity × unit_price_ht doit être proche de total_ht.
     Si ce n'est pas le cas, recalcule la quantité réelle depuis total_ht / unit_price_ht.
@@ -234,15 +234,15 @@ def parse_document_lines_via_llm(full_text: str) -> list[dict]:
             "https://api.mistral.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={
-                "model":       "mistral-small-latest",
-                "messages":    [{"role": "user", "content": prompt}],
-                "max_tokens":  3000,
+                "model": "mistral-small-latest",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 3000,
                 "temperature": 0.0,
             },
             timeout=30,
         )
-        data     = response.json()
-        content  = data["choices"][0]["message"]["content"].strip()
+        data = response.json()
+        content = data["choices"][0]["message"]["content"].strip()
 
         # Nettoie les backticks markdown si présents
         content = content.replace("```json", "").replace("```", "").strip()
@@ -254,14 +254,14 @@ def parse_document_lines_via_llm(full_text: str) -> list[dict]:
         lines = []
         for i, item in enumerate(items):
             lines.append({
-                "raw_label":     item.get("raw_label", "")[:300],
-                "line_type":     item.get("line_type", "product"),
-                "tax_code":      item.get("tax_code", ""),
-                "quantity":      _to_decimal(item.get("quantity")),
-                "unit":          item.get("unit", ""),
+                "raw_label": item.get("raw_label", "")[:300],
+                "line_type": item.get("line_type", "product"),
+                "tax_code": item.get("tax_code", ""),
+                "quantity": _to_decimal(item.get("quantity")),
+                "unit": item.get("unit", ""),
                 "unit_price_ht": _to_decimal(item.get("unit_price_ht")),
-                "total_ht":      _to_decimal(item.get("total_ht")),
-                "order":         i,
+                "total_ht": _to_decimal(item.get("total_ht")),
+                "order": i,
             })
         return lines
 
@@ -314,10 +314,10 @@ def match_ingredients(lines: list[dict], tenant_ingredients: list, tenant=None, 
             ).order_by("-score").first()
 
             if mapping:
-                line["matched_ingredient_pk"]   = mapping.ingredient.pk
+                line["matched_ingredient_pk"] = mapping.ingredient.pk
                 line["matched_ingredient_name"] = mapping.ingredient.name
-                line["match_score"]             = min(100.0, 80 + mapping.score)
-                line["from_learning"]           = True
+                line["match_score"] = min(100.0, 80 + mapping.score)
+                line["from_learning"] = True
                 continue
 
         # ── 2. Matching fuzzy rapidfuzz ───────────────────────────────────
@@ -340,15 +340,15 @@ def match_ingredients(lines: list[dict], tenant_ingredients: list, tenant=None, 
 
         if result:
             matched_name, score, idx = result
-            line["matched_ingredient_pk"]   = tenant_ingredients[idx]["pk"]
+            line["matched_ingredient_pk"] = tenant_ingredients[idx]["pk"]
             line["matched_ingredient_name"] = matched_name
-            line["match_score"]             = score
-            line["from_learning"]           = False
+            line["match_score"] = score
+            line["from_learning"] = False
         else:
-            line["matched_ingredient_pk"]   = None
+            line["matched_ingredient_pk"] = None
             line["matched_ingredient_name"] = None
-            line["match_score"]             = None
-            line["from_learning"]           = False
+            line["match_score"] = None
+            line["from_learning"] = False
 
     return lines
 
@@ -416,9 +416,9 @@ Texte :
             "https://api.mistral.ai/v1/chat/completions",
             headers={"Authorization": f"Bearer {settings.MISTRAL_API_KEY}"},
             json={
-                "model":       "mistral-small-latest",
-                "messages":    [{"role": "user", "content": prompt}],
-                "max_tokens":  500,
+                "model": "mistral-small-latest",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 500,
                 "temperature": 0.0,
             },
             timeout=20,
@@ -434,12 +434,12 @@ Texte :
 
 def process_document(document_instance) -> dict:
     filepath = document_instance.document.path
-    tenant   = document_instance.tenant
+    tenant = document_instance.tenant
 
     # ── 1. Extraction texte ───────────────────────────────────────────────
-    pages     = extract_text_from_pdf(filepath)
+    pages = extract_text_from_pdf(filepath)
     full_text = ""
-    engine    = "pymupdf"
+    engine = "pymupdf"
 
     for page in pages:
         if page["has_text"]:
@@ -476,7 +476,7 @@ def process_document(document_instance) -> dict:
         ).select_related("ingredient")
         for ref in supplier_refs:
             tenant_ingredients.append({
-                "pk":   ref.ingredient.pk,
+                "pk": ref.ingredient.pk,
                 "name": ref.supplier_item_name or ref.ingredient.name,
             })
 
@@ -486,12 +486,17 @@ def process_document(document_instance) -> dict:
             tenant_ingredients.append({"pk": ing.pk, "name": ing.name})
 
     # ── 5. Matching fuzzy ─────────────────────────────────────────────────
-    matched_lines = match_ingredients(parsed_lines, tenant_ingredients)
+    matched_lines = match_ingredients(
+        parsed_lines,
+        tenant_ingredients,
+        tenant=tenant,
+        supplier=document_instance.supplier,
+    )
 
     return {
-        "lines":              matched_lines,
-        "engine":             engine,
-        "pages":              len(pages),
-        "error":              None,
+        "lines": matched_lines,
+        "engine": engine,
+        "pages": len(pages),
+        "error": None,
         "supplier_detection": supplier_detection,
     }

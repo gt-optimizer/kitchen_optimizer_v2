@@ -2,24 +2,51 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
+from django.db.models import Q
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 
-from .models import Supplier, DeliveryDocument, DeliveryLine
-from .forms import SupplierForm, DeliveryDocumentForm
+from .models import Supplier, DeliveryDocument, DeliveryLine, SupplierIngredient, SupplierContact
+from .forms import SupplierForm, DeliveryDocumentForm, SupplierIngredientForm, SupplierContactForm
 
 logger = logging.getLogger(__name__)
 
 
-# ── Fournisseurs ──────────────────────────────────────────────────────────────
+# ── Fournisseurs — liste ───────────────────────────────────────────────────────
 
 @login_required
 def supplier_list(request):
-    suppliers = Supplier.objects.filter(tenant=request.tenant)
+    qs = Supplier.objects.filter(tenant=request.tenant)
+
+    q = request.GET.get("q", "").strip()
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(city__icontains=q) |
+            Q(siret__icontains=q) |
+            Q(email__icontains=q)
+        )
+
+    active_filter = request.GET.get("active", "")
+    if active_filter == "1":
+        qs = qs.filter(is_active=True)
+    elif active_filter == "0":
+        qs = qs.filter(is_active=False)
+
+    # HTMX — retourne uniquement les lignes du tableau
+    if request.headers.get("HX-Request"):
+        return render(request, "purchasing/partials/supplier_table_rows.html", {
+            "suppliers": qs,
+        })
+
     return render(request, "purchasing/supplier_list.html", {
-        "suppliers": suppliers,
+        "suppliers": qs,
+        "q": q,
+        "active_filter": active_filter,
     })
 
+
+# ── Fournisseurs — création ────────────────────────────────────────────────────
 
 @login_required
 def supplier_add(request):
@@ -34,18 +61,31 @@ def supplier_add(request):
     else:
         form = SupplierForm()
     return render(request, "purchasing/supplier_form.html", {
-        "form": form, "action": "Nouveau fournisseur"
+        "form": form,
+        "action": "Nouveau fournisseur",
     })
 
+
+# ── Fournisseurs — détail ──────────────────────────────────────────────────────
 
 @login_required
 def supplier_detail(request, pk):
     supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
-    documents = supplier.documents.order_by("-created_at")[:10]
+    contacts           = supplier.contacts.all().order_by("last_name", "first_name")
+    supplier_ingredients = supplier.supplier_ingredients.select_related("ingredient").filter(is_active=True)
+    receptions         = supplier.reception_set.order_by("-delivery_date")[:20] if hasattr(supplier, "reception_set") else []
+    documents          = supplier.documents.order_by("-created_at")[:20]
+
     return render(request, "purchasing/supplier_detail.html", {
-        "supplier": supplier, "documents": documents,
+        "supplier":             supplier,
+        "contacts":             contacts,
+        "supplier_ingredients": supplier_ingredients,
+        "receptions":           receptions,
+        "documents":            documents,
     })
 
+
+# ── Fournisseurs — édition ─────────────────────────────────────────────────────
 
 @login_required
 def supplier_edit(request, pk):
@@ -59,7 +99,159 @@ def supplier_edit(request, pk):
     else:
         form = SupplierForm(instance=supplier)
     return render(request, "purchasing/supplier_form.html", {
-        "form": form, "action": "Modifier le fournisseur", "supplier": supplier,
+        "form": form,
+        "action": "Modifier le fournisseur",
+        "supplier": supplier,
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CONTACTS — HTMX drawers
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def supplier_contact_add(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    if request.method == "POST":
+        form = SupplierContactForm(request.POST)
+        if form.is_valid():
+            contact = form.save(commit=False)
+            contact.supplier = supplier
+            contact.save()
+            # Retourne la liste mise à jour pour HTMX
+            contacts = supplier.contacts.all().order_by("last_name", "first_name")
+            return render(request, "purchasing/partials/supplier_contacts.html", {
+                "supplier": supplier,
+                "contacts": contacts,
+            })
+        # Formulaire invalide — retourne le drawer avec erreurs
+        return render(request, "purchasing/partials/supplier_contact_drawer.html", {
+            "form": form,
+            "supplier": supplier,
+            "form_action": request.path,
+        })
+    else:
+        form = SupplierContactForm()
+    return render(request, "purchasing/partials/supplier_contact_drawer.html", {
+        "form": form,
+        "supplier": supplier,
+        "form_action": request.path,
+    })
+
+
+@login_required
+def supplier_contact_edit(request, pk, contact_pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    contact  = get_object_or_404(SupplierContact, pk=contact_pk, supplier=supplier)
+    if request.method == "POST":
+        form = SupplierContactForm(request.POST, instance=contact)
+        if form.is_valid():
+            form.save()
+            contacts = supplier.contacts.all().order_by("last_name", "first_name")
+            return render(request, "purchasing/partials/supplier_contacts.html", {
+                "supplier": supplier,
+                "contacts": contacts,
+            })
+        return render(request, "purchasing/partials/supplier_contact_drawer.html", {
+            "form": form,
+            "supplier": supplier,
+            "contact": contact,
+            "form_action": request.path,
+        })
+    else:
+        form = SupplierContactForm(instance=contact)
+    return render(request, "purchasing/partials/supplier_contact_drawer.html", {
+        "form": form,
+        "supplier": supplier,
+        "contact": contact,
+        "form_action": request.path,
+    })
+
+
+@login_required
+def supplier_contact_delete(request, pk, contact_pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    contact  = get_object_or_404(SupplierContact, pk=contact_pk, supplier=supplier)
+    if request.method == "POST":
+        contact.delete()
+    contacts = supplier.contacts.all().order_by("last_name", "first_name")
+    return render(request, "purchasing/partials/supplier_contacts.html", {
+        "supplier": supplier,
+        "contacts": contacts,
+    })
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RÉFÉRENCES INGRÉDIENTS — HTMX drawers
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def supplier_ingredient_add(request, pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    if request.method == "POST":
+        form = SupplierIngredientForm(request.POST, tenant=request.tenant, supplier=supplier)
+        if form.is_valid():
+            si = form.save(commit=False)
+            si.supplier = supplier
+            si.save()
+            sis = supplier.supplier_ingredients.select_related("ingredient").filter(is_active=True)
+            return render(request, "purchasing/partials/supplier_ingredients.html", {
+                "supplier": supplier,
+                "supplier_ingredients": sis,
+            })
+        return render(request, "purchasing/partials/supplier_ingredient_drawer.html", {
+            "form": form,
+            "supplier": supplier,
+            "form_action": request.path,
+        })
+    else:
+        form = SupplierIngredientForm(tenant=request.tenant, supplier=supplier)
+    return render(request, "purchasing/partials/supplier_ingredient_drawer.html", {
+        "form": form,
+        "supplier": supplier,
+        "form_action": request.path,
+    })
+
+
+@login_required
+def supplier_ingredient_edit(request, pk, si_pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    si       = get_object_or_404(SupplierIngredient, pk=si_pk, supplier=supplier)
+    if request.method == "POST":
+        form = SupplierIngredientForm(request.POST, instance=si, tenant=request.tenant)
+        if form.is_valid():
+            form.save()
+            sis = supplier.supplier_ingredients.select_related("ingredient").filter(is_active=True)
+            return render(request, "purchasing/partials/supplier_ingredients.html", {
+                "supplier": supplier,
+                "supplier_ingredients": sis,
+            })
+        return render(request, "purchasing/partials/supplier_ingredient_drawer.html", {
+            "form": form,
+            "supplier": supplier,
+            "si": si,
+            "form_action": request.path,
+        })
+    else:
+        form = SupplierIngredientForm(instance=si, tenant=request.tenant)
+    return render(request, "purchasing/partials/supplier_ingredient_drawer.html", {
+        "form": form,
+        "supplier": supplier,
+        "si": si,
+        "form_action": request.path,
+    })
+
+
+@login_required
+def supplier_ingredient_delete(request, pk, si_pk):
+    supplier = get_object_or_404(Supplier, pk=pk, tenant=request.tenant)
+    si       = get_object_or_404(SupplierIngredient, pk=si_pk, supplier=supplier)
+    if request.method == "POST":
+        si.delete()
+    sis = supplier.supplier_ingredients.select_related("ingredient").filter(is_active=True)
+    return render(request, "purchasing/partials/supplier_ingredients.html", {
+        "supplier": supplier,
+        "supplier_ingredients": sis,
     })
 
 
@@ -273,6 +465,24 @@ def document_line_match(request, pk, line_pk):
         request=request,
     )
     return HttpResponse(html)
+
+
+@login_required
+def document_delete(request, pk):
+    doc = get_object_or_404(DeliveryDocument, pk=pk, tenant=request.tenant)
+
+    if request.method == "POST":
+        label = str(doc)
+        # Supprime le fichier physique si présent
+        if doc.document:
+            import os
+            if os.path.isfile(doc.document.path):
+                os.remove(doc.document.path)
+        doc.delete()
+        messages.success(request, f"Document « {label} » supprimé.")
+        return redirect("purchasing:document_list")
+
+    return render(request, "purchasing/document_confirm_delete.html", {"doc": doc})
 
 @login_required
 def supplier_add_from_doc(request, pk):

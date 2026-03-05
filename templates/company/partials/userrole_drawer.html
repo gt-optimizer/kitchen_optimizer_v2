@@ -1,0 +1,33 @@
+{% load widget_tweaks %}
+<form hx-post="{{ form_action }}" hx-target="#userroles-list" hx-swap="innerHTML">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Employé *</label>
+      {% render_field form.employee class="form-select" %}
+      {% if form.employee.errors %}
+        <div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.employee.errors.0 }}</div>
+      {% endif %}
+      <div class="form-hint">Seuls les employés avec un compte actif sont listés.</div>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Rôle *</label>
+      {% render_field form.role class="form-select" %}
+    </div>
+    <div class="col-12">
+      <div class="alert alert-info" style="font-size:var(--font-size-xs);">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>
+          <strong>Owner / Admin</strong> : accès complet financiers, catalogue, utilisateurs<br>
+          <strong>Production</strong> : catalogue, recettes, équipements, stocks, planning<br>
+          <strong>Worker</strong> : production, PMS, stock<br>
+          <strong>Cleaning</strong> : PMS uniquement
+        </div>
+      </div>
+    </div>
+  </div>
+  <hr class="divider mt-2">
+  <button type="submit" class="btn btn-primary">
+    <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+  </button>
+</form>

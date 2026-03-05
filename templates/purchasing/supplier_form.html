@@ -1,0 +1,137 @@
+{% extends "base/_base.html" %}
+{% block title %}{{ action }} — L'Atelier{% endblock %}
+{% block nav_purchasing %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% if supplier %}{% url 'purchasing:supplier_detail' supplier.pk %}{% else %}{% url 'purchasing:supplier_list' %}{% endif %}"
+     class="btn btn-ghost btn-icon">
+    <i class="fa-solid fa-arrow-left"></i>
+  </a>
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-truck"></i> {{ action }}
+  </h1>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="row g-4">
+
+    <!-- Colonne principale -->
+    <div class="col-lg-8">
+
+      <!-- Identité -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-building"></i> Identité</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">Raison sociale *</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Adresse</label>
+              {{ form.address }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Code postal</label>
+              {{ form.zipcode }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Ville</label>
+              {{ form.city }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Coordonnées -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-address-book"></i> Coordonnées</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Téléphone</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Infos légales -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-scale-balanced"></i> Informations légales</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">N° SIRET</label>
+              {{ form.siret }}
+              <div class="form-hint">14 chiffres</div>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">N° RCS</label>
+              {{ form.rcs }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">N° TVA intracommunautaire</label>
+              {{ form.vat_number }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Colonne latérale -->
+    <div class="col-lg-4">
+      <div class="card mb-4">
+        <div class="card-header">
+          <span class="card-title"><i class="fa-solid fa-toggle-on"></i> Statut</span>
+        </div>
+        <div class="card-body">
+          <div class="d-flex align-items-center gap-3">
+            {{ form.is_active }}
+            <label for="{{ form.is_active.id_for_label }}" class="form-label mb-0">
+              Fournisseur actif
+            </label>
+          </div>
+          <div class="form-hint mt-2">Un fournisseur inactif n'apparaît plus dans les listes de sélection.</div>
+        </div>
+      </div>
+
+      {% if doc %}
+      <div class="alert alert-info">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>Données pré-remplies depuis le document <strong>{{ doc }}</strong>. Vérifiez avant d'enregistrer.</div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <!-- Actions -->
+  <div class="d-flex gap-3 mt-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+    </button>
+    <a href="{% if supplier %}{% url 'purchasing:supplier_detail' supplier.pk %}{% else %}{% url 'purchasing:supplier_list' %}{% endif %}"
+       class="btn btn-ghost">
+      Annuler
+    </a>
+  </div>
+
+</form>
+{% endblock %}

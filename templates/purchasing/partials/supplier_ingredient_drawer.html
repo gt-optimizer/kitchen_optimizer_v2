@@ -1,0 +1,49 @@
+{% load widget_tweaks %}
+<form method="post" action="{{ form_action }}"
+      hx-post="{{ form_action }}"
+      hx-target="#supplier-ingredients-list"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Ingrédient *</label>
+      {% render_field form.ingredient class="form-select" %}
+      {% if form.ingredient.errors %}
+      <div class="text-danger" style="font-size:var(--font-size-xs);">{{ form.ingredient.errors.0 }}</div>
+      {% endif %}
+    </div>
+    <div class="col-6">
+      <label class="form-label">Référence fournisseur</label>
+      {% render_field form.supplier_item_number class="form-control" placeholder="Ex: XA1234" %}
+    </div>
+    <div class="col-6">
+      <label class="form-label">EAN13</label>
+      {% render_field form.ean13 class="form-control" placeholder="3012345678901" %}
+    </div>
+    <div class="col-12">
+      <label class="form-label">Désignation fournisseur</label>
+      {% render_field form.supplier_item_name class="form-control" placeholder="Libellé tel qu'il apparaît sur le BL" %}
+      <div class="form-hint">Utilisé pour le matching automatique des documents.</div>
+    </div>
+    <div class="col-6">
+      <label class="form-label">Prix négocié HT (€)</label>
+      {% render_field form.negotiated_price class="form-control" %}
+    </div>
+    <div class="col-6 d-flex align-items-end gap-2 pb-1">
+      {% render_field form.is_preferred %}
+      <label class="form-label mb-0">Fournisseur préféré</label>
+    </div>
+    <div class="col-6 d-flex align-items-center gap-2">
+      {% render_field form.is_active %}
+      <label class="form-label mb-0">Actif</label>
+    </div>
+  </div>
+
+  <hr class="divider mt-4">
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+    </button>
+  </div>
+</form>

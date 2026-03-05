@@ -1,0 +1,82 @@
+{% extends "base/_base.html" %}
+{% block title %}Sites — L'Atelier{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-store"></i> Sites
+  </h1>
+  <a href="{% url 'company:company_create' %}" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Nouveau site
+  </a>
+</div>
+
+{% if companies %}
+<div class="row g-4">
+  {% for company in companies %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100" style="transition: box-shadow var(--transition-fast);"
+         onmouseenter="this.style.boxShadow='var(--shadow-md)'"
+         onmouseleave="this.style.boxShadow=''">
+      <div class="card-header">
+        <span class="card-title">
+          <i class="fa-solid fa-store"></i> {{ company.name }}
+        </span>
+        {% if company.is_active %}
+        <span class="badge badge-success"><i class="fa-solid fa-circle fa-xs"></i> Actif</span>
+        {% else %}
+        <span class="badge badge-muted"><i class="fa-solid fa-circle fa-xs"></i> Inactif</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="text-muted mb-3" style="font-size: var(--font-size-sm);">
+          {{ company.get_company_type_display }}
+          {% if company.city %} · {{ company.city }}{% endif %}
+        </div>
+        <div class="d-flex gap-3" style="font-size: var(--font-size-sm);">
+          <div>
+            <div class="kpi-label">Employés</div>
+            <div style="font-family: var(--font-title); font-weight: 700; font-size: var(--font-size-xl);">
+              {{ company.employees.count }}
+            </div>
+          </div>
+          <div>
+            <div class="kpi-label">Équipements</div>
+            <div style="font-family: var(--font-title); font-weight: 700; font-size: var(--font-size-xl);">
+              {{ company.equipment.count }}
+            </div>
+          </div>
+          <div>
+            <div class="kpi-label">Stockage</div>
+            <div style="font-family: var(--font-title); font-weight: 700; font-size: var(--font-size-xl);">
+              {{ company.storage_places.count }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <a href="{% url 'company:company_detail' company.pk %}" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-eye"></i> Voir la fiche
+        </a>
+        <a href="{% url 'company:company_edit' company.pk %}" class="btn btn-secondary btn-sm">
+          <i class="fa-solid fa-pen"></i> Modifier
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body text-center" style="padding: var(--space-12)">
+    <i class="fa-solid fa-store"
+       style="font-size:3rem; color:var(--color-primary-light); display:block; margin-bottom:var(--space-4)"></i>
+    <div class="fw-bold mb-2">Aucun site configuré</div>
+    <div class="text-muted mb-4">Créez votre premier site pour commencer</div>
+    <a href="{% url 'company:company_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouveau site
+    </a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

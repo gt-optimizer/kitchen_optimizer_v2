@@ -3,127 +3,219 @@
 {% block nav_purchasing %}active{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center gap-3 mb-4">
-  <a href="{% url 'purchasing:supplier_list' %}" class="btn btn-ghost btn-icon">
-    <i class="fa-solid fa-arrow-left"></i>
-  </a>
-  <h1 class="page-title mb-0">{{ supplier.name }}</h1>
-  <div class="ms-auto d-flex gap-2">
+
+<!-- En-tête -->
+<div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
+  <div class="d-flex align-items-center gap-3">
+    <a href="{% url 'purchasing:supplier_list' %}" class="btn btn-ghost btn-icon">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <div>
+      <h1 class="page-title mb-1">
+        <i class="fa-solid fa-truck"></i> {{ supplier.name }}
+      </h1>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        {% if supplier.is_active %}
+        <span class="badge badge-success"><i class="fa-solid fa-circle fa-xs"></i> Actif</span>
+        {% else %}
+        <span class="badge badge-muted"><i class="fa-solid fa-circle fa-xs"></i> Inactif</span>
+        {% endif %}
+        {% if supplier.city %}
+        <span class="text-muted" style="font-size: var(--font-size-sm);">
+          <i class="fa-solid fa-location-dot fa-xs"></i> {{ supplier.zipcode }} {{ supplier.city }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2">
     <a href="{% url 'purchasing:supplier_edit' supplier.pk %}" class="btn btn-secondary">
       <i class="fa-solid fa-pen"></i> Modifier
-    </a>
-    <a href="{% url 'purchasing:document_upload' %}" class="btn btn-primary">
-      <i class="fa-solid fa-file-arrow-up"></i> Importer un BL
     </a>
   </div>
 </div>
 
-<div class="row g-4">
-  <div class="col-md-4">
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="card-title"><i class="fa-solid fa-info-circle"></i> Coordonnées</h5>
+<!-- Onglets -->
+<ul class="nav nav-tabs mb-4" id="supplierTabs" role="tablist"
+    style="border-bottom: 2px solid var(--color-border);">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="tab-info" data-bs-toggle="tab" data-bs-target="#pane-info"
+            type="button" role="tab" style="font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: 500;">
+      <i class="fa-solid fa-circle-info me-1"></i> Infos
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-contacts" data-bs-toggle="tab" data-bs-target="#pane-contacts"
+            type="button" role="tab" style="font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: 500;">
+      <i class="fa-solid fa-address-book me-1"></i> Contacts
+      {% if contacts %}<span class="badge badge-primary ms-1">{{ contacts|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-catalog" data-bs-toggle="tab" data-bs-target="#pane-catalog"
+            type="button" role="tab" style="font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: 500;">
+      <i class="fa-solid fa-carrot me-1"></i> Catalogue
+      {% if supplier_ingredients %}<span class="badge badge-primary ms-1">{{ supplier_ingredients|length }}</span>{% endif %}
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-receptions" data-bs-toggle="tab" data-bs-target="#pane-receptions"
+            type="button" role="tab" style="font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: 500;">
+      <i class="fa-solid fa-boxes-stacked me-1"></i> Réceptions
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-docs" data-bs-toggle="tab" data-bs-target="#pane-docs"
+            type="button" role="tab" style="font-family: var(--font-body); font-size: var(--font-size-sm); font-weight: 500;">
+      <i class="fa-solid fa-file-invoice me-1"></i> Documents
+      {% if documents %}<span class="badge badge-primary ms-1">{{ documents|length }}</span>{% endif %}
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  <!-- ── Onglet Infos ── -->
+  <div class="tab-pane fade show active" id="pane-info" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-building"></i> Coordonnées</span>
+          </div>
+          <div class="card-body">
+            <dl class="row mb-0" style="font-size: var(--font-size-sm);">
+              {% if supplier.address %}
+              <dt class="col-5 text-muted fw-normal">Adresse</dt>
+              <dd class="col-7">{{ supplier.address }}<br>{{ supplier.zipcode }} {{ supplier.city }}</dd>
+              {% endif %}
+              {% if supplier.phone %}
+              <dt class="col-5 text-muted fw-normal">Téléphone</dt>
+              <dd class="col-7"><a href="tel:{{ supplier.phone }}" class="text-decoration-none">{{ supplier.phone }}</a></dd>
+              {% endif %}
+              {% if supplier.email %}
+              <dt class="col-5 text-muted fw-normal">Email</dt>
+              <dd class="col-7"><a href="mailto:{{ supplier.email }}" class="text-decoration-none">{{ supplier.email }}</a></dd>
+              {% endif %}
+              {% if not supplier.address and not supplier.phone and not supplier.email %}
+              <dd class="col-12 text-muted">Aucune coordonnée renseignée.</dd>
+              {% endif %}
+            </dl>
+          </div>
+        </div>
       </div>
-      <div class="card-body">
-        <div class="row g-3" style="font-size:var(--font-size-sm)">
-          {% if supplier.address %}
-          <div class="col-12">
-            <div class="form-label">Adresse</div>
-            <div>{{ supplier.address }}</div>
-            <div>{{ supplier.zipcode }} {{ supplier.city }}</div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-scale-balanced"></i> Infos légales</span>
           </div>
-          {% endif %}
-          {% if supplier.phone %}
-          <div class="col-12">
-            <div class="form-label">Téléphone</div>
-            <a href="tel:{{ supplier.phone }}">{{ supplier.phone }}</a>
+          <div class="card-body">
+            <dl class="row mb-0" style="font-size: var(--font-size-sm);">
+              {% if supplier.siret %}
+              <dt class="col-5 text-muted fw-normal">SIRET</dt>
+              <dd class="col-7" style="font-family: monospace;">{{ supplier.siret }}</dd>
+              {% endif %}
+              {% if supplier.rcs %}
+              <dt class="col-5 text-muted fw-normal">RCS</dt>
+              <dd class="col-7" style="font-family: monospace;">{{ supplier.rcs }}</dd>
+              {% endif %}
+              {% if supplier.vat_number %}
+              <dt class="col-5 text-muted fw-normal">N° TVA</dt>
+              <dd class="col-7" style="font-family: monospace;">{{ supplier.vat_number }}</dd>
+              {% endif %}
+              {% if not supplier.siret and not supplier.rcs and not supplier.vat_number %}
+              <dd class="col-12 text-muted">Aucune info légale renseignée.</dd>
+              {% endif %}
+            </dl>
           </div>
-          {% endif %}
-          {% if supplier.email %}
-          <div class="col-12">
-            <div class="form-label">Email</div>
-            <a href="mailto:{{ supplier.email }}">{{ supplier.email }}</a>
-          </div>
-          {% endif %}
-          {% if supplier.siret %}
-          <div class="col-6">
-            <div class="form-label">SIRET</div>
-            <div>{{ supplier.siret }}</div>
-          </div>
-          {% endif %}
-          {% if supplier.rcs %}
-          <div class="col-6">
-            <div class="form-label">RCS</div>
-            <div>{{ supplier.rcs }}</div>
-          </div>
-          {% endif %}
-          {% if supplier.vat_number %}
-          <div class="col-12">
-            <div class="form-label">N° TVA</div>
-            <div>{{ supplier.vat_number }}</div>
-          </div>
-          {% endif %}
         </div>
       </div>
     </div>
+  </div>
 
-    {# Ingrédients référencés #}
-    {% with refs=supplier.supplier_ingredients.all %}
-    {% if refs %}
+  <!-- ── Onglet Contacts ── -->
+  <div class="tab-pane fade" id="pane-contacts" role="tabpanel">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'purchasing:supplier_contact_add' supplier.pk %}"
+              hx-target="#contact-drawer-body"
+              hx-on::after-request="document.getElementById('contactDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Ajouter un contact
+      </button>
+    </div>
+    <div class="card" id="contacts-list">
+      {% include "purchasing/partials/supplier_contacts.html" %}
+    </div>
+  </div>
+
+  <!-- ── Onglet Catalogue ── -->
+  <div class="tab-pane fade" id="pane-catalog" role="tabpanel">
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm"
+              hx-get="{% url 'purchasing:supplier_ingredient_add' supplier.pk %}"
+              hx-target="#ingredient-drawer-body"
+              hx-on::after-request="document.getElementById('ingredientDrawer').classList.add('open')">
+        <i class="fa-solid fa-plus"></i> Lier un ingrédient
+      </button>
+    </div>
+    <div class="card" id="supplier-ingredients-list">
+      {% include "purchasing/partials/supplier_ingredients.html" %}
+    </div>
+  </div>
+
+  <!-- ── Onglet Réceptions ── -->
+  <div class="tab-pane fade" id="pane-receptions" role="tabpanel">
     <div class="card">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-carrot"></i> Références
-          <span class="badge badge-muted ms-1">{{ refs.count }}</span>
-        </h5>
-      </div>
-      <div class="card-body p-0">
-        <table class="table-atelier">
+      <div class="card-body" style="padding: 0;">
+        {% if receptions %}
+        <table class="table-atelier w-100">
           <thead>
             <tr>
-              <th>Ingrédient</th>
-              <th>Prix négocié</th>
+              <th>N° réception</th>
+              <th>Date</th>
+              <th>N° facture</th>
+              <th class="text-end">Montant HT</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {% for ref in refs %}
+            {% for rec in receptions %}
             <tr>
-              <td style="font-size:var(--font-size-xs)">
-                {{ ref.ingredient.name }}
-                {% if ref.is_preferred %}
-                  <i class="fa-solid fa-star text-warning ms-1" title="Fournisseur préféré"></i>
-                {% endif %}
-              </td>
-              <td style="font-size:var(--font-size-xs)">
-                {% if ref.negotiated_price %}
-                  {{ ref.negotiated_price }} €
-                {% else %}—{% endif %}
+              <td><span style="font-family: monospace; font-size: var(--font-size-xs);">{{ rec.reception_number }}</span></td>
+              <td>{{ rec.delivery_date|date:"d/m/Y" }}</td>
+              <td>{{ rec.invoice_number|default:"—" }}</td>
+              <td class="text-end fw-600">{{ rec.total_amount|floatformat:2 }} €</td>
+              <td>
+                <div class="table-actions">
+                  <a href="#" class="btn btn-ghost btn-icon btn-sm" title="Voir">
+                    <i class="fa-solid fa-eye"></i>
+                  </a>
+                </div>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        {% else %}
+        <div class="text-center text-muted" style="padding: var(--space-8);">
+          <i class="fa-solid fa-boxes-stacked fa-2x mb-3 d-block" style="color: var(--color-text-disabled);"></i>
+          Aucune réception enregistrée pour ce fournisseur.
+        </div>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
-    {% endwith %}
   </div>
 
-  <div class="col-md-8">
+  <!-- ── Onglet Documents ── -->
+  <div class="tab-pane fade" id="pane-docs" role="tabpanel">
     <div class="card">
-      <div class="card-header">
-        <h5 class="card-title">
-          <i class="fa-solid fa-file-invoice"></i> Documents récents
-          <span class="badge badge-muted ms-1">{{ documents.count }}</span>
-        </h5>
-      </div>
-      {% if documents %}
-      <div class="card-body p-0">
-        <table class="table-atelier">
+      <div class="card-body" style="padding: 0;">
+        {% if documents %}
+        <table class="table-atelier w-100">
           <thead>
             <tr>
-              <th>Référence</th>
               <th>Type</th>
+              <th>Référence</th>
               <th>Date</th>
               <th>Statut</th>
               <th></th>
@@ -132,37 +224,191 @@
           <tbody>
             {% for doc in documents %}
             <tr>
-              <td>{{ doc.reference|default:"Sans référence" }}</td>
-              <td>{{ doc.get_document_type_display }}</td>
-              <td>{{ doc.document_date|date:"d/m/Y"|default:"—" }}</td>
               <td>
-                {% if doc.status == "pending" %}
-                  <span class="badge badge-muted">En attente</span>
-                {% elif doc.status == "parsed" %}
-                  <span class="badge badge-warning">À valider</span>
-                {% elif doc.status == "validated" %}
-                  <span class="badge badge-success">Validé</span>
+                <span class="badge badge-info">{{ doc.get_document_type_display }}</span>
+              </td>
+              <td>{{ doc.reference|default:"—" }}</td>
+              <td>{{ doc.document_date|date:"d/m/Y"|default:doc.created_at|date:"d/m/Y" }}</td>
+              <td>
+                {% if doc.status == "validated" %}
+                <span class="badge badge-success">{{ doc.get_status_display }}</span>
                 {% elif doc.status == "error" %}
-                  <span class="badge badge-danger">Erreur</span>
+                <span class="badge badge-danger">{{ doc.get_status_display }}</span>
+                {% elif doc.status == "parsed" %}
+                <span class="badge badge-warning">{{ doc.get_status_display }}</span>
+                {% else %}
+                <span class="badge badge-muted">{{ doc.get_status_display }}</span>
                 {% endif %}
               </td>
               <td>
-                <a href="{% url 'purchasing:document_detail' doc.pk %}"
-                   class="btn btn-ghost btn-icon btn-sm">
-                  <i class="fa-solid fa-eye"></i>
-                </a>
+                <div class="table-actions">
+                  <a href="{% url 'purchasing:document_detail' doc.pk %}" class="btn btn-ghost btn-icon btn-sm">
+                    <i class="fa-solid fa-eye"></i>
+                  </a>
+                </div>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
+        {% else %}
+        <div class="text-center text-muted" style="padding: var(--space-8);">
+          <i class="fa-solid fa-file-invoice fa-2x mb-3 d-block" style="color: var(--color-text-disabled);"></i>
+          Aucun document pour ce fournisseur.
+        </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="card-body text-center text-muted" style="padding:var(--space-8)">
-        Aucun document importé pour ce fournisseur
-      </div>
-      {% endif %}
+    </div>
+  </div>
+
+</div><!-- /tab-content -->
+
+
+<!-- ══════════════════════════════════════════════
+     DRAWER — Contact
+════════════════════════════════════════════════ -->
+<div id="contactDrawer" class="atelier-drawer" x-data="{ open: false }"
+     :class="{ open: open }"
+     @open-contact-drawer.window="open = true"
+     @keydown.escape.window="open = false">
+  <div class="atelier-drawer-overlay" @click="open = false; document.getElementById('contactDrawer').classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title" id="contact-drawer-title">Contact</span>
+      <button class="btn btn-ghost btn-icon"
+              @click="open = false; document.getElementById('contactDrawer').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="contact-drawer-body" class="atelier-drawer-body">
+      <!-- chargé via HTMX -->
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════
+     DRAWER — Ingrédient fournisseur
+════════════════════════════════════════════════ -->
+<div id="ingredientDrawer" class="atelier-drawer" x-data="{ open: false }"
+     :class="{ open: open }"
+     @open-ingredient-drawer.window="open = true"
+     @keydown.escape.window="open = false">
+  <div class="atelier-drawer-overlay" @click="open = false; document.getElementById('ingredientDrawer').classList.remove('open')"></div>
+  <div class="atelier-drawer-panel">
+    <div class="atelier-drawer-header">
+      <span class="atelier-drawer-title" id="ingredient-drawer-title">Référence ingrédient</span>
+      <button class="btn btn-ghost btn-icon"
+              @click="open = false; document.getElementById('ingredientDrawer').classList.remove('open')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="ingredient-drawer-body" class="atelier-drawer-body">
+      <!-- chargé via HTMX -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Drawer ─────────────────────────────────── */
+.atelier-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 1080;
+  pointer-events: none;
+}
+.atelier-drawer.open {
+  pointer-events: auto;
+}
+.atelier-drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.25);
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+.atelier-drawer.open .atelier-drawer-overlay {
+  opacity: 1;
+}
+.atelier-drawer-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 420px;
+  max-width: 100vw;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--transition-base);
+}
+.atelier-drawer.open .atelier-drawer-panel {
+  transform: translateX(0);
+}
+.atelier-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+}
+.atelier-drawer-title {
+  font-family: var(--font-title);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.atelier-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+}
+
+/* ── Nav tabs ──────────────────────────────── */
+.nav-tabs .nav-link {
+  color: var(--color-text-secondary);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 0;
+  transition: all var(--transition-fast);
+}
+.nav-tabs .nav-link:hover {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary-light);
+  background: transparent;
+}
+.nav-tabs .nav-link.active {
+  color: var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  background: transparent;
+  font-weight: 600;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Ouvre le drawer contact via HTMX after-request
+document.body.addEventListener('htmx:afterRequest', function(evt) {
+  const target = evt.detail.target;
+  if (target && target.id === 'contact-drawer-body') {
+    document.getElementById('contactDrawer').classList.add('open');
+  }
+  if (target && target.id === 'ingredient-drawer-body') {
+    document.getElementById('ingredientDrawer').classList.add('open');
+  }
+});
+
+// Ferme les drawers et refresh les listes après submit HTMX
+document.body.addEventListener('htmx:afterSwap', function(evt) {
+  const targetId = evt.detail.target ? evt.detail.target.id : '';
+  if (targetId === 'contacts-list' || targetId === 'supplier-ingredients-list') {
+    document.getElementById('contactDrawer').classList.remove('open');
+    document.getElementById('ingredientDrawer').classList.remove('open');
+  }
+});
+</script>
 {% endblock %}

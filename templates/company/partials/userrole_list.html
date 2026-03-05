@@ -1,0 +1,58 @@
+{% if user_roles %}
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Employé</th>
+        <th>Identifiant</th>
+        <th>Rôle</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ur in user_roles %}
+      <tr>
+        <td>
+          <div class="fw-600">{{ ur.user.get_full_name|default:ur.user.username }}</div>
+          <div class="text-muted" style="font-size:var(--font-size-xs);">{{ ur.user.email }}</div>
+        </td>
+        <td>
+          <span style="font-family:monospace;font-size:var(--font-size-sm);color:var(--color-text-secondary);">
+            {{ ur.user.username }}
+          </span>
+        </td>
+        <td>
+          {% if ur.role == "owner" %}
+          <span class="badge badge-warning"><i class="fa-solid fa-crown fa-xs"></i> {{ ur.get_role_display }}</span>
+          {% elif ur.role == "admin" %}
+          <span class="badge badge-danger"><i class="fa-solid fa-user-shield fa-xs"></i> {{ ur.get_role_display }}</span>
+          {% elif ur.role == "production" %}
+          <span class="badge badge-success"><i class="fa-solid fa-fire-burner fa-xs"></i> {{ ur.get_role_display }}</span>
+          {% elif ur.role == "worker" %}
+          <span class="badge badge-info"><i class="fa-solid fa-person fa-xs"></i> {{ ur.get_role_display }}</span>
+          {% else %}
+          <span class="badge badge-muted">{{ ur.get_role_display }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-danger btn-icon btn-sm"
+                    hx-post="{% url 'company:userrole_delete' company.pk ur.pk %}"
+                    hx-target="#userroles-list"
+                    hx-confirm="Révoquer l'accès de {{ ur.user.get_full_name }} ?"
+                    title="Révoquer">
+              <i class="fa-solid fa-user-minus"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center text-muted" style="padding: var(--space-8);">
+  <i class="fa-solid fa-user-shield fa-2x mb-3 d-block" style="color:var(--color-text-disabled);"></i>
+  Aucun accès configuré. Créez des employés pour leur donner accès.
+</div>
+{% endif %}
