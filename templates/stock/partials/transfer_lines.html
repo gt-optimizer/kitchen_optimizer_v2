@@ -1,0 +1,48 @@
+<div class="table-responsive">
+  <table class="table-atelier w-100">
+    <thead>
+      <tr>
+        <th>Article</th>
+        <th class="text-end">Qté</th>
+        <th class="hide-mobile">DLC</th>
+        <th class="hide-mobile">Lot</th>
+        {% if transfer.status == 'draft' %}<th></th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for line in lines %}
+      <tr>
+        <td>
+          <div class="fw-600">{% if line.ingredient %}{{ line.ingredient.name }}{% else %}{{ line.recipe.name }}{% endif %}</div>
+          {% if line.ingredient %}<span class="badge badge-muted" style="font-size:10px">Ingrédient</span>
+          {% else %}<span class="badge badge-primary" style="font-size:10px">Recette</span>{% endif %}
+        </td>
+        <td class="text-end fw-bold">{{ line.quantity }} {{ line.unit }}</td>
+        <td class="hide-mobile text-muted" style="font-size:var(--font-size-xs)">
+          {{ line.best_before|date:"d/m/Y"|default:"—" }}
+        </td>
+        <td class="hide-mobile" style="font-family:monospace;font-size:var(--font-size-xs)">
+          {{ line.tracability_number|default:"—" }}
+        </td>
+        {% if transfer.status == 'draft' %}
+        <td>
+          <button class="btn btn-danger btn-icon btn-sm"
+                  hx-post="{% url 'stock:transfer_line_delete' transfer.pk line.pk %}"
+                  hx-target="#transfer-lines"
+                  hx-confirm="Supprimer cette ligne ?"
+                  title="Supprimer">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+        {% endif %}
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="text-center text-muted" style="padding:var(--space-6)">
+          Aucun article. Ajoutez des articles au transfert.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

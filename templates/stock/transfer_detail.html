@@ -1,0 +1,92 @@
+{% extends "base/_base.html" %}
+{% block title %}Transfert {{ transfer.pk }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-arrows-left-right"></i>
+    {{ transfer.from_company.name }} → {{ transfer.to_company.name }}
+    <span class="text-muted" style="font-size:var(--font-size-base);font-weight:400">
+      — {{ transfer.transfer_date|date:"d/m/Y" }}
+    </span>
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'stock:transfer_list' %}" class="btn btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    {% if transfer.status == 'draft' and transfer.from_company == company %}
+    <button class="btn btn-secondary"
+            hx-get="{% url 'stock:transfer_line_add' transfer.pk %}"
+            hx-target="#drawer-content"
+            hx-trigger="click"
+            onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).show()">
+      <i class="fa-solid fa-plus"></i> Ajouter un article
+    </button>
+    <a href="{% url 'stock:transfer_send' transfer.pk %}" class="btn btn-primary">
+      <i class="fa-solid fa-paper-plane"></i> Envoyer
+    </a>
+    {% endif %}
+    {% if transfer.status == 'sent' and transfer.to_company == company %}
+    <a href="{% url 'stock:transfer_receive' transfer.pk %}" class="btn btn-primary">
+      <i class="fa-solid fa-box-open"></i> Réceptionner
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Statut -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="card p-3">
+      <div class="text-muted" style="font-size:var(--font-size-xs);text-transform:uppercase;letter-spacing:.06em">Expéditeur</div>
+      <div class="fw-bold">{{ transfer.from_company.name }}</div>
+      {% if transfer.sent_at %}
+      <div class="text-muted" style="font-size:var(--font-size-xs)">Envoyé le {{ transfer.sent_at|date:"d/m/Y H:i" }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card p-3">
+      <div class="text-muted" style="font-size:var(--font-size-xs);text-transform:uppercase;letter-spacing:.06em">Destinataire</div>
+      <div class="fw-bold">{{ transfer.to_company.name }}</div>
+      {% if transfer.received_at %}
+      <div class="text-muted" style="font-size:var(--font-size-xs)">Réceptionné le {{ transfer.received_at|date:"d/m/Y H:i" }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="card p-3">
+      <div class="text-muted" style="font-size:var(--font-size-xs);text-transform:uppercase;letter-spacing:.06em">Statut</div>
+      {% if transfer.status == 'draft' %}
+      <span class="badge badge-muted">En préparation</span>
+      {% elif transfer.status == 'sent' %}
+      <span class="badge badge-warning">Envoyé — en attente de réception</span>
+      {% elif transfer.status == 'received' %}
+      <span class="badge badge-success">Réceptionné</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Lignes -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title"><i class="fa-solid fa-list"></i> Articles ({{ lines|length }})</h2>
+  </div>
+  <div id="transfer-lines">
+    {% include "stock/partials/transfer_lines.html" %}
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="offcanvas offcanvas-end" id="drawer" tabindex="-1">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" style="font-family:var(--font-title)">
+      <i class="fa-solid fa-plus" style="color:var(--color-primary-light)"></i> Ajouter un article
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body" id="drawer-content"></div>
+</div>
+{% endblock %}

@@ -6,7 +6,11 @@ def atelier_context(request):
         return {}
 
     # ── Site actif ────────────────────────────────────────────────────────
-    companies = request.user.get_companies()
+    if request.user.is_superuser:
+        # Superuser : accès à tous les sites du tenant
+        companies = Company.objects.all()
+    else:
+        companies = request.user.get_companies()
 
     current_company = None
     company_id = request.session.get('current_company_id')

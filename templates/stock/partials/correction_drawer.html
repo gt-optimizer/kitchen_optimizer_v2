@@ -1,0 +1,50 @@
+{% load widget_tweaks %}
+{% if batch %}
+<div class="mb-3 p-3 rounded" style="background:var(--color-primary-faint)">
+  <div class="fw-bold">{{ batch.article_name }}</div>
+  <div class="text-muted" style="font-size:var(--font-size-xs)">
+    Disponible : <strong>{{ batch.quantity_remaining }} {{ batch.unit }}</strong>
+    {% if batch.best_before %} — {{ batch.get_date_type_display|slice:":4" }} {{ batch.best_before|date:"d/m/Y" }}{% endif %}
+    {% if batch.tracability_number %} — Lot {{ batch.tracability_number }}{% endif %}
+  </div>
+</div>
+{% endif %}
+
+<form hx-post="{{ form_action }}{% if batch %}?batch={{ batch.pk }}{% endif %}"
+      hx-target="#batch-table"
+      hx-swap="innerHTML"
+      hx-on::after-request="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).hide()">
+  {% csrf_token %}
+  {% if batch %}
+  <input type="hidden" name="batch_id" value="{{ batch.pk }}">
+  {% endif %}
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Raison *</label>
+      {% render_field form.correction_reason class="form-select" %}
+    </div>
+    <div class="col-8">
+      <label class="form-label">Quantité à retirer *</label>
+      {% render_field form.quantity class="form-control" placeholder="Ex: -2.5" %}
+      <div class="form-hint">Négatif = sortie. Ex: -2.5 pour retirer 2.5 kg</div>
+    </div>
+    <div class="col-4">
+      <label class="form-label">Unité</label>
+      {% render_field form.unit class="form-control" %}
+    </div>
+    <div class="col-12">
+      <label class="form-label">Notes</label>
+      {% render_field form.notes class="form-control" %}
+    </div>
+  </div>
+  <hr class="divider mt-3">
+  <div class="d-flex gap-2">
+    <button type="submit" class="btn btn-danger">
+      <i class="fa-solid fa-minus"></i> Enregistrer la correction
+    </button>
+    <button type="button" class="btn btn-ghost"
+            onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).hide()">
+      Annuler
+    </button>
+  </div>
+</form>

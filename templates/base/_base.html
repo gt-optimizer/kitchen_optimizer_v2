@@ -174,7 +174,7 @@
     {% endif %}
 
     {% if perms_stock %}
-    <a href="#" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
+    <a href="{% url 'stock:dashboard' %}" class="atelier-nav-link {% block nav_stock %}{% endblock %}">
       <i class="fa-solid fa-boxes-stacked"></i> Stock
     </a>
     {% endif %}
@@ -238,6 +238,21 @@
           </a>
           <hr class="nav-dropdown-divider">
           {% endif %}
+          {% if user_companies.count > 1 %}
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-header" style="font-size:var(--font-size-xs)">
+            Changer de site
+          </div>
+          {% for co in user_companies %}
+          <a class="dropdown-item {% if co == current_company %}fw-bold text-primary{% endif %}"
+             href="{% url 'company:switch' co.pk %}">
+            {% if co == current_company %}
+            <i class="fa-solid fa-check fa-xs"></i>
+            {% endif %}
+            {{ co.name }}
+          </a>
+          {% endfor %}
+          {% endif %}
           <a class="nav-dropdown-item danger" href="{% url 'logout' %}">
             <i class="fa-solid fa-right-from-bracket" style="width:16px"></i> Déconnexion
           </a>
@@ -300,10 +315,9 @@
     {% endif %}
 
     {% if perms_stock %}
-    <a href="#" class="bottom-nav-item {% block bottom_stock %}{% endblock %}">
+    <a href="{% url 'stock:dashboard' %}" class="bottom-nav-item {% block nav_stock_mobile %}{% endblock %}">
       <i class="fa-solid fa-boxes-stacked"></i>
       <span>Stock</span>
-      {% if stock_alerts_count %}<span class="badge-dot"></span>{% endif %}
     </a>
     {% endif %}
 

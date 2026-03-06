@@ -1,0 +1,125 @@
+{% extends "base/_base.html" %}
+{% block title %}Inventaire {{ inventory.started_at|date:"d/m/Y" }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-clipboard-list"></i>
+    Inventaire du {{ inventory.started_at|date:"d/m/Y" }}
+    {% if inventory.status == 'draft' %}
+    <span class="badge badge-warning ms-2">En cours</span>
+    {% else %}
+    <span class="badge badge-success ms-2">Validé</span>
+    {% endif %}
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'stock:inventory_list' %}" class="btn btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    {% if inventory.status == 'draft' %}
+    <a href="{% url 'stock:inventory_validate' inventory.pk %}" class="btn btn-primary">
+      <i class="fa-solid fa-check"></i> Valider l'inventaire
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if inventory.notes %}
+<div class="alert alert-info mb-4">
+  <i class="fa-solid fa-circle-info"></i>
+  <div>{{ inventory.notes }}</div>
+</div>
+{% endif %}
+
+<!-- Résumé écarts -->
+{% with deltas=lines|dictsortreversed:"delta" %}
+{% if inventory.status == 'validated' %}
+<div class="alert alert-success mb-4">
+  <i class="fa-solid fa-check"></i>
+  <div>Inventaire validé le {{ inventory.validated_at|date:"d/m/Y à H:i" }}. Les stocks ont été corrigés.</div>
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- Liste des articles — interface mobile-first -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title"><i class="fa-solid fa-list"></i> Articles ({{ lines|length }})</h2>
+    {% if inventory.status == 'draft' %}
+    <div class="d-flex gap-2 align-items-center">
+      <span class="badge badge-info" style="font-size:var(--font-size-xs)">
+        <i class="fa-solid fa-hand-pointer"></i> Cliquez sur ✏️ pour saisir
+      </span>
+      <button class="btn btn-secondary btn-sm"
+              hx-get="{% url 'stock:inventory_line_add' inventory.pk %}"
+              hx-target="#drawer-content"
+              hx-trigger="click"
+              onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).show()">
+        <i class="fa-solid fa-plus"></i> Ajouter
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  </div>
+  <div class="card-body p-0">
+    <table class="table-atelier w-100">
+      <thead>
+        <tr>
+          <th>Article</th>
+          <th class="text-center">Théorique</th>
+          <th class="text-center">Compté</th>
+          <th class="text-center">Écart</th>
+          {% if inventory.status == 'draft' %}<th></th>{% endif %}
+        </tr>
+      </thead>
+      <tbody id="inventory-tbody">
+        {% for line in lines %}
+        <tr id="inventory-line-{{ line.pk }}">
+          <td>
+            <div class="fw-600" style="font-size:var(--font-size-sm)">
+              {% if line.ingredient %}{{ line.ingredient.name }}{% else %}{{ line.recipe.name }}{% endif %}
+            </div>
+            <span class="text-muted" style="font-size:var(--font-size-xs)">{{ line.unit }}</span>
+          </td>
+          <td class="text-center text-muted">{{ line.theoretical_quantity }}</td>
+          <td class="text-center fw-bold">
+            {{ line.counted_quantity }}
+          </td>
+          <td class="text-center">
+            {% if line.delta > 0 %}
+            <span class="badge badge-success">+{{ line.delta }}</span>
+            {% elif line.delta < 0 %}
+            <span class="badge badge-danger">{{ line.delta }}</span>
+            {% else %}
+            <span class="badge badge-muted">0</span>
+            {% endif %}
+          </td>
+          {% if inventory.status == 'draft' %}
+          <td>
+            <button class="btn btn-ghost btn-icon btn-sm"
+                    hx-get="{% url 'stock:inventory_line_edit' inventory.pk line.pk %}"
+                    hx-target="#inventory-line-{{ line.pk }}"
+                    hx-swap="outerHTML"
+                    title="Saisir">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="offcanvas offcanvas-end" id="drawer" tabindex="-1">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" style="font-family:var(--font-title)">
+      <i class="fa-solid fa-plus" style="color:var(--color-primary-light)"></i> Ajouter un article
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body" id="drawer-content"></div>
+</div>
+{% endblock %}

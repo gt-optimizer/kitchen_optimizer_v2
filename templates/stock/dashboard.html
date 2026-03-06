@@ -1,0 +1,194 @@
+{% extends "base/_base.html" %}
+{% block title %}Stock — {{ company.name }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-boxes-stacked"></i> Stock
+    <span class="text-muted" style="font-size:var(--font-size-lg);font-weight:400"> — {{ company.name }}</span>
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'stock:batch_list' %}" class="btn btn-light">
+      <i class="fa-solid fa-list"></i> Lots
+    </a>
+    <a href="{% url 'stock:inventory_list' %}" class="btn btn-light">
+      <i class="fa-solid fa-clipboard-list"></i> Inventaires
+    </a>
+    <a href="{% url 'stock:transfer_list' %}" class="btn btn-light">
+      <i class="fa-solid fa-arrows-left-right"></i> Transferts
+    </a>
+    {% if current_inventory %}
+    <a href="{% url 'stock:inventory_detail' current_inventory.pk %}" class="btn btn-warning">
+      <i class="fa-solid fa-clipboard-list"></i> Inventaire en cours
+    </a>
+    {% else %}
+    <a href="{% url 'stock:inventory_create' %}" class="btn btn-secondary">
+      <i class="fa-solid fa-plus"></i> Nouvel inventaire
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Alertes ── -->
+{% if dlc_warnings %}
+<div class="alert alert-danger mb-4">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <div>
+    <strong>{{ dlc_warnings|length }} lot(s) en alerte DLC/DLUO</strong>
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      {% for batch in dlc_warnings %}
+      <span class="badge {% if batch.is_expired %}badge-danger{% else %}badge-warning{% endif %}">
+        {{ batch.article_name }} —
+        {% if batch.is_expired %}périmé{% else %}expire le {{ batch.best_before|date:"d/m" }}{% endif %}
+        ({{ batch.quantity_remaining }} {{ batch.unit }})
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if low_stock %}
+<div class="alert alert-warning mb-4">
+  <i class="fa-solid fa-arrow-down"></i>
+  <div>
+    <strong>{{ low_stock|length }} article(s) sous le stock minimum</strong>
+    <div class="mt-2 d-flex flex-wrap gap-2">
+      {% for level in low_stock %}
+      <span class="badge badge-warning">
+        {{ level.article_name }} : {{ level.quantity }} / {{ level.minimum_stock }} {{ level.unit }}
+      </span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── KPIs ── -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+      <div class="kpi-label">Articles en stock</div>
+      <div class="kpi-value">{{ levels|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--color-danger-bg);color:var(--color-danger)"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div class="kpi-label">Alertes DLC</div>
+      <div class="kpi-value {% if dlc_warnings %}text-danger{% endif %}">{{ dlc_warnings|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon" style="background:var(--color-warning-bg);color:var(--color-warning)"><i class="fa-solid fa-arrow-down"></i></div>
+      <div class="kpi-label">Stocks bas</div>
+      <div class="kpi-value {% if low_stock %}text-warning{% endif %}">{{ low_stock|length }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card">
+      <div class="kpi-icon"><i class="fa-solid fa-arrows-left-right"></i></div>
+      <div class="kpi-label">Transferts en attente</div>
+      <div class="kpi-value">
+        {{ company.transfers_in.count }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Tableau stock ── -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title"><i class="fa-solid fa-boxes-stacked"></i> Niveaux de stock</h2>
+    <a href="{% url 'stock:correction_add' %}" class="btn btn-secondary btn-sm"
+       hx-get="{% url 'stock:correction_add' %}" hx-target="#drawer-content" hx-trigger="click"
+       data-bs-toggle="offcanvas" data-bs-target="#drawer">
+      <i class="fa-solid fa-minus"></i> Correction
+    </a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-atelier w-100">
+        <thead>
+          <tr>
+            <th>Article</th>
+            <th>Type</th>
+            <th class="text-end">Quantité</th>
+            <th class="hide-mobile">Stock min.</th>
+            <th class="hide-mobile">Statut</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for level in levels %}
+          <tr>
+            <td>
+              <div class="fw-600">{{ level.article_name }}</div>
+            </td>
+            <td>
+              {% if level.ingredient %}
+              <span class="badge badge-muted"><i class="fa-solid fa-carrot fa-xs"></i> Ingrédient</span>
+              {% else %}
+              <span class="badge badge-primary"><i class="fa-solid fa-utensils fa-xs"></i> Recette</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-600">
+              {{ level.quantity }} {{ level.unit }}
+            </td>
+            <td class="hide-mobile text-muted">
+              {% if level.minimum_stock > 0 %}{{ level.minimum_stock }} {{ level.unit }}{% else %}—{% endif %}
+            </td>
+            <td class="hide-mobile">
+              {% if level.is_below_minimum %}
+              <span class="badge badge-warning"><i class="fa-solid fa-arrow-down fa-xs"></i> Bas</span>
+              {% elif level.quantity <= 0 %}
+              <span class="badge badge-danger">Épuisé</span>
+              {% else %}
+              <span class="badge badge-success"><i class="fa-solid fa-check fa-xs"></i> OK</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="table-actions">
+                <a href="{% url 'stock:batch_list' %}?q={{ level.article_name|urlencode }}"
+                   class="btn btn-ghost btn-icon btn-sm" title="Voir les lots">
+                  <i class="fa-solid fa-list"></i>
+                </a>
+                <a href="{% url 'stock:correction_add' %}{% if level.ingredient %}?ingredient={{ level.ingredient.pk }}{% endif %}"
+                   class="btn btn-ghost btn-icon btn-sm" title="Correction">
+                  <i class="fa-solid fa-pen"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted" style="padding:var(--space-8)">
+              <i class="fa-solid fa-boxes-stacked fa-2x mb-3 d-block" style="color:var(--color-text-disabled)"></i>
+              Aucun stock enregistré. Les réceptions alimentent automatiquement le stock.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Drawer correction ── -->
+<div class="offcanvas offcanvas-end" id="drawer" tabindex="-1">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" style="font-family:var(--font-title)">
+      <i class="fa-solid fa-pen" style="color:var(--color-primary-light)"></i> Correction de stock
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body" id="drawer-content">
+    <div class="text-center text-muted mt-4">
+      <i class="fa-solid fa-spinner fa-spin"></i> Chargement...
+    </div>
+  </div>
+</div>
+{% endblock %}

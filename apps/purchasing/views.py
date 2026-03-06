@@ -566,9 +566,13 @@ def ingredient_create_from_line(request, pk, line_pk):
         data.setdefault("packages_per_purchase_unit", "1")
         data.setdefault("yield_rate", "100")
         form = IngredientForm(data, request.FILES)
+        if not form.is_valid():
+            print("ERREURS FORM:", form.errors)  # visible dans la console runserver
+            print("ERREURS NON FIELD:", form.non_field_errors())
         if form.is_valid():
             ingredient = form.save(commit=False)
             ingredient.tenant = request.tenant
+            ingredient.is_active = True
             ingredient.save()
 
             if doc.supplier:

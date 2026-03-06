@@ -1,0 +1,65 @@
+{% extends "base/_base.html" %}
+{% block title %}Lots en stock — {{ company.name }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-layer-group"></i> Lots en stock
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'stock:dashboard' %}" class="btn btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Stock
+    </a>
+    <a href="{% url 'stock:correction_add' %}"
+       hx-get="{% url 'stock:correction_add' %}"
+       hx-target="#drawer-content"
+       hx-trigger="click"
+       data-bs-toggle="offcanvas" data-bs-target="#drawer"
+       class="btn btn-secondary">
+      <i class="fa-solid fa-minus"></i> Correction
+    </a>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card mb-4">
+  <div class="card-body py-3">
+    <form hx-get="{% url 'stock:batch_list' %}" hx-target="#batch-table" hx-trigger="input delay:300ms, change"
+          class="d-flex gap-2 flex-wrap align-items-center">
+      <input type="search" name="q" value="{{ search }}" placeholder="Rechercher un article, un lot..."
+             class="form-control" style="max-width:280px;">
+      <select name="filter" class="form-select" style="max-width:200px;">
+        <option value="" {% if not filter_type %}selected{% endif %}>Tous les lots</option>
+        <option value="warning" {% if filter_type == 'warning' %}selected{% endif %}>⚠️ Alerte DLC (≤ 3j)</option>
+        <option value="expired" {% if filter_type == 'expired' %}selected{% endif %}>🔴 Périmés</option>
+        <option value="no_date" {% if filter_type == 'no_date' %}selected{% endif %}>Sans date limite</option>
+      </select>
+      <span class="htmx-indicator text-muted" style="font-size:var(--font-size-xs)">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+      </span>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div id="batch-table">
+    {% include "stock/partials/batch_table.html" %}
+  </div>
+</div>
+
+<!-- Drawer -->
+<div class="offcanvas offcanvas-end" id="drawer" tabindex="-1">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" style="font-family:var(--font-title)">
+      <i class="fa-solid fa-pen" style="color:var(--color-primary-light)"></i> Correction / Édition
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body" id="drawer-content">
+    <div class="text-center text-muted mt-4">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+    </div>
+  </div>
+</div>
+{% endblock %}

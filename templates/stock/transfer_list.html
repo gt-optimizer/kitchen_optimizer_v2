@@ -1,0 +1,69 @@
+{% extends "base/_base.html" %}
+{% block title %}Transferts internes — {{ company.name }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-arrows-left-right"></i> Transferts internes
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'stock:dashboard' %}" class="btn btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Stock
+    </a>
+    <a href="{% url 'stock:transfer_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouveau transfert
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-atelier w-100">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>De</th>
+          <th>Vers</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tr in transfers %}
+        <tr>
+          <td>{{ tr.transfer_date|date:"d/m/Y" }}</td>
+          <td>{{ tr.from_company.name }}</td>
+          <td>{{ tr.to_company.name }}</td>
+          <td>
+            {% if tr.status == 'draft' %}
+            <span class="badge badge-muted">En préparation</span>
+            {% elif tr.status == 'sent' %}
+            <span class="badge badge-warning">Envoyé</span>
+            {% elif tr.status == 'received' %}
+            <span class="badge badge-success">Réceptionné</span>
+            {% else %}
+            <span class="badge badge-danger">Annulé</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="table-actions">
+              <a href="{% url 'stock:transfer_detail' tr.pk %}" class="btn btn-ghost btn-icon btn-sm">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted" style="padding:var(--space-8)">
+            <i class="fa-solid fa-arrows-left-right fa-2x mb-3 d-block" style="color:var(--color-text-disabled)"></i>
+            Aucun transfert enregistré.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

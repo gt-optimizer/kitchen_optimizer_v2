@@ -1,0 +1,33 @@
+{% load widget_tweaks %}
+<tr id="inventory-line-{{ line.pk }}">
+  <td colspan="5">
+    <form hx-post="{{ form_action }}"
+          hx-target="#inventory-line-{{ line.pk }}"
+          hx-swap="outerHTML"
+          class="d-flex align-items-center gap-2 flex-wrap p-2"
+          style="background:var(--color-primary-faint);border-radius:var(--radius-md)">
+      {% csrf_token %}
+      <div class="fw-bold" style="min-width:120px;font-size:var(--font-size-sm)">
+        {% if line.ingredient %}{{ line.ingredient.name }}{% else %}{{ line.recipe.name }}{% endif %}
+      </div>
+      <div style="min-width:100px">
+        {% render_field form.counted_quantity autofocus="true" %}
+        <div class="form-hint text-center">{{ line.unit }}</div>
+      </div>
+      <div style="flex:1;min-width:120px">
+        {% render_field form.notes placeholder="Notes..." %}
+      </div>
+      <div class="d-flex gap-1">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="fa-solid fa-check"></i>
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm"
+                hx-get="{% url 'stock:inventory_line_edit' inventory.pk line.pk %}"
+                hx-target="#inventory-line-{{ line.pk }}"
+                hx-swap="outerHTML">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </form>
+  </td>
+</tr>

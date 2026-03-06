@@ -1,0 +1,70 @@
+{% extends "base/_base.html" %}
+{% block title %}Inventaires — {{ company.name }}{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-clipboard-list"></i> Inventaires
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'stock:dashboard' %}" class="btn btn-ghost">
+      <i class="fa-solid fa-arrow-left"></i> Stock
+    </a>
+    <a href="{% url 'stock:inventory_create' %}" class="btn btn-primary">
+      <i class="fa-solid fa-plus"></i> Nouvel inventaire
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table-atelier w-100">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Statut</th>
+          <th class="hide-mobile">Articles</th>
+          <th class="hide-mobile">Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in inventories %}
+        <tr>
+          <td>{{ inv.started_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            {% if inv.status == 'draft' %}
+            <span class="badge badge-warning"><i class="fa-solid fa-pen fa-xs"></i> En cours</span>
+            {% else %}
+            <span class="badge badge-success"><i class="fa-solid fa-check fa-xs"></i> Validé</span>
+            {% endif %}
+          </td>
+          <td class="hide-mobile">{{ inv.lines.count }}</td>
+          <td class="hide-mobile text-muted" style="font-size:var(--font-size-xs)">{{ inv.notes|truncatechars:60 }}</td>
+          <td>
+            <div class="table-actions">
+              <a href="{% url 'stock:inventory_detail' inv.pk %}" class="btn btn-ghost btn-icon btn-sm">
+                <i class="fa-solid fa-eye"></i>
+              </a>
+              {% if inv.status == 'draft' %}
+              <a href="{% url 'stock:inventory_validate' inv.pk %}" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-check"></i> Valider
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted" style="padding:var(--space-8)">
+            <i class="fa-solid fa-clipboard-list fa-2x mb-3 d-block" style="color:var(--color-text-disabled)"></i>
+            Aucun inventaire. Créez votre premier inventaire.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

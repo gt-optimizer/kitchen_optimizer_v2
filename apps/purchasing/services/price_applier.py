@@ -14,16 +14,17 @@ def apply_document_prices(document) -> dict:
     """
     Applique les prix des lignes confirmées d'un DeliveryDocument.
     Crée un PriceRecord par ingrédient + une Reception avec ses lignes.
+    Crée un StockBatch + StockMovement pour alimenter le stock.
     Retourne un résumé des changements.
     """
     from apps.pricing.models import PriceRecord
     from apps.purchasing.models import Reception, ReceptionLine
+    from apps.stock.models import StockBatch, StockMovement
 
     tenant   = document.tenant
     supplier = document.supplier
     today    = timezone.localdate()
 
-    # ── Récupère le site (company) du tenant ──────────────────────────────
     company = tenant.companies.first() if hasattr(tenant, 'companies') else None
     if not company:
         logger.error(f"apply_document_prices: aucun site (company) trouvé pour le tenant {tenant}")
@@ -46,7 +47,6 @@ def apply_document_prices(document) -> dict:
     if not confirmed_lines.exists():
         return {"applied": 0, "skipped": 0, "errors": [], "changes": [], "reception": None}
 
-    # ── Crée la réception (une seule fois) ────────────────────────────────
     reception = Reception.objects.create(
         company=company,
         supplier=supplier,
@@ -62,20 +62,14 @@ def apply_document_prices(document) -> dict:
     for line in confirmed_lines:
         ingredient = line.matched_ingredient
         try:
-            # Prix précédent pour afficher le delta
             old_price = (
                 PriceRecord.objects
-                .filter(
-                    ingredient=ingredient,
-                    channel="purchase",
-                    valid_from__lte=today,
-                )
+                .filter(ingredient=ingredient, channel="purchase", valid_from__lte=today)
                 .order_by("-valid_from")
                 .values_list("price_ht", flat=True)
                 .first()
             )
 
-            # Crée le nouveau PriceRecord
             PriceRecord.objects.create(
                 tenant=tenant,
                 ingredient=ingredient,
@@ -86,24 +80,59 @@ def apply_document_prices(document) -> dict:
                 notes=f"Import auto — {document} — {line.raw_label[:80]}",
             )
 
-            # Crée la ligne de réception
             reception_line = ReceptionLine.objects.create(
                 reception=reception,
                 ingredient=ingredient,
                 supplier_ref=None,
                 invoiced_quantity=line.quantity or Decimal("1"),
                 invoiced_price=line.unit_price_ht,
-                invoiced_amount=round(
-                    (line.unit_price_ht or 0) * (line.quantity or 1), 3
-                ),
+                invoiced_amount=round((line.unit_price_ht or 0) * (line.quantity or 1), 3),
             )
 
-            # Lie la ligne de livraison à la ligne de réception
             line.reception_line = reception_line
             line.applied = True
             line.save(update_fields=["reception_line", "applied"])
 
-            # Calcule le delta prix
+            # ── Stock : lot + mouvement ───────────────────────────────────
+            quantity = line.quantity or Decimal("1")
+            unit     = line.unit or ingredient.use_unit or ingredient.purchase_unit or "kg"
+
+            # Produit frais si conservation <= 8°C → DLC bloquante
+            if (
+                ingredient.target_keeping_temp_max is not None
+                and ingredient.target_keeping_temp_max <= Decimal("8")
+            ):
+                date_type = "dlc"
+            else:
+                date_type = "dluo"
+
+            batch = StockBatch.objects.create(
+                company=company,
+                ingredient=ingredient,
+                recipe=None,
+                reception_line=reception_line,
+                quantity_initial=quantity,
+                quantity_remaining=quantity,
+                unit=unit,
+                tracability_number=reception_line.tracability_number or "",
+                best_before=reception_line.best_before,
+                date_type=date_type,
+                unit_price_at_entry=line.unit_price_ht,
+            )
+
+            StockMovement.objects.create(
+                company=company,
+                ingredient=ingredient,
+                recipe=None,
+                movement_type="reception",
+                quantity=quantity,
+                unit=unit,
+                stock_batch=batch,
+                reception_line=reception_line,
+                notes=f"Réception {reception.reception_number} — {supplier}",
+            )
+            # ─────────────────────────────────────────────────────────────
+
             delta     = None
             delta_pct = None
             if old_price:
@@ -125,7 +154,6 @@ def apply_document_prices(document) -> dict:
             errors.append(f"{ingredient.name} : {e}")
             skipped += 1
 
-    # Marque le document comme validé
     document.status = "validated"
     document.save(update_fields=["status"])
 

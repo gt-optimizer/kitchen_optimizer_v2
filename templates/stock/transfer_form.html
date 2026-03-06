@@ -1,0 +1,40 @@
+{% extends "base/_base.html" %}
+{% block title %}Nouveau transfert{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-plus"></i> Nouveau transfert
+  </h1>
+  <a href="{% url 'stock:transfer_list' %}" class="btn btn-ghost">
+    <i class="fa-solid fa-arrow-left"></i> Annuler
+  </a>
+</div>
+
+<div class="card" style="max-width:600px">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Site destinataire *</label>
+          {{ form.to_company }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Date de transfert</label>
+          {{ form.transfer_date }}
+        </div>
+        <div class="col-12">
+          <label class="form-label">Notes</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <hr class="divider mt-4">
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-arrow-right"></i> Créer le transfert
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

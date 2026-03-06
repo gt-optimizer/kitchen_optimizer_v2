@@ -866,3 +866,35 @@ h6, .h6 { font-size: var(--font-size-sm);  font-weight: 600; }
 .accordion-collapse.show {
   overflow: visible !important;
 }
+
+/* ── Autocomplete dropdown ───────────────────────────────────────────── */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-white);
+  border: 1.5px solid var(--color-primary-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 1050;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+  font-size: var(--font-size-sm);
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-item:hover {
+  background: var(--color-primary-faint);
+  color: var(--color-primary-dark);
+}

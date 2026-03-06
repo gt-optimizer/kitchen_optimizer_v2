@@ -1,0 +1,50 @@
+<tr id="batch-row-{{ batch.pk }}">
+  <td>
+    <div class="fw-600">{{ batch.article_name }}</div>
+    {% if batch.ingredient %}
+    <span class="text-muted" style="font-size:var(--font-size-xs)">Ingrédient</span>
+    {% else %}
+    <span class="badge badge-primary" style="font-size:10px;">Recette</span>
+    {% endif %}
+  </td>
+  <td class="hide-mobile">
+    {% if batch.tracability_number %}
+    <span style="font-family:monospace;font-size:var(--font-size-xs)">{{ batch.tracability_number }}</span>
+    {% else %}<span class="text-muted">—</span>{% endif %}
+  </td>
+  <td>
+    {% if batch.best_before %}
+      {% if batch.is_expired %}
+      <span class="badge badge-danger">Périmé {{ batch.best_before|date:"d/m/Y" }}</span>
+      {% elif batch.is_dlc_warning %}
+      <span class="badge badge-warning">{{ batch.best_before|date:"d/m/Y" }}</span>
+      {% else %}
+      <span class="badge badge-muted">{{ batch.best_before|date:"d/m/Y" }}</span>
+      {% endif %}
+    {% else %}
+    <span class="text-muted">—</span>
+    {% endif %}
+  </td>
+  <td class="text-end fw-600">{{ batch.quantity_remaining }} {{ batch.unit }}</td>
+  <td class="hide-mobile text-muted" style="font-size:var(--font-size-xs)">
+    {{ batch.storage_place.name|default:"—" }}
+  </td>
+  <td>
+    <div class="table-actions">
+      <button class="btn btn-ghost btn-icon btn-sm"
+              hx-get="{% url 'stock:batch_edit' batch.pk %}"
+              hx-target="#drawer-content"
+              hx-trigger="click"
+              onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).show()">
+        <i class="fa-solid fa-pen"></i>
+      </button>
+      <button class="btn btn-ghost btn-icon btn-sm"
+              hx-get="{% url 'stock:correction_add' %}?batch={{ batch.pk }}"
+              hx-target="#drawer-content"
+              hx-trigger="click"
+              onclick="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).show()">
+        <i class="fa-solid fa-minus"></i>
+      </button>
+    </div>
+  </td>
+</tr>

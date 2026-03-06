@@ -1,0 +1,122 @@
+{% load widget_tweaks %}
+<form hx-post="{{ form_action }}"
+      hx-target="#transfer-lines"
+      hx-swap="innerHTML"
+      hx-on::after-request="bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('drawer')).hide()"
+      x-data="{ articleType: 'ingredient' }">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-12">
+      <label class="form-label">Type d'article</label>
+      <div class="d-flex gap-3">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="article_type" value="ingredient"
+                 id="type_ingredient" checked x-model="articleType">
+          <label class="form-check-label" for="type_ingredient">Ingrédient</label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="article_type" value="recipe"
+                 id="type_recipe" x-model="articleType">
+          <label class="form-check-label" for="type_recipe">Recette / produit</label>
+        </div>
+      </div>
+    </div>
+    <div class="col-12" x-show="articleType === 'ingredient'">
+      <label class="form-label">Ingrédient</label>
+      <div style="position:relative">
+        <input type="text"
+             id="ingredient-search"
+             class="form-control"
+             placeholder="Rechercher un ingrédient..."
+             name="q"
+             autocomplete="off"
+             oninput="searchIngredient(this.value)">
+      <div id="ingredient-results"></div>
+        <!-- Champ caché qui contient le pk sélectionné -->
+        <input type="hidden" name="ingredient" id="ingredient-id">
+        <!-- Affiche l'article sélectionné -->
+        <div id="ingredient-selected" class="mt-1" style="font-size:var(--font-size-xs);color:var(--color-primary);display:none">
+          <i class="fa-solid fa-check"></i> <span id="ingredient-selected-name"></span>
+          <a href="#" onclick="clearIngredient(); return false;" class="ms-2 text-muted">✕</a>
+        </div>
+      </div>
+    </div>
+
+    </div>
+    <div class="col-12" x-show="articleType === 'recipe'">
+      <label class="form-label">Recette</label>
+      {% render_field form.recipe class="form-select" %}
+    </div>
+    <div class="col-8">
+      <label class="form-label">Quantité *</label>
+      {% render_field form.quantity class="form-control" %}
+    </div>
+    <div class="col-4">
+      <label class="form-label">Unité *</label>
+      <select name="unit" class="form-select">
+        <option value="kg">kg</option>
+        <option value="g">g</option>
+        <option value="litre">litre</option>
+        <option value="cl">cl</option>
+        <option value="ml">ml</option>
+        <option value="pièce">pièce</option>
+        <option value="paquet">paquet</option>
+        <option value="colis">colis</option>
+        <option value="portion">portion</option>
+        <option value="m">mètre</option>
+        <option value="cm">centimètre</option>
+      </select>
+    </div>
+    <div class="col-6">
+      <label class="form-label">DLC / DLUO</label>
+      {% render_field form.best_before class="form-control" %}
+    </div>
+    <div class="col-6">
+      <label class="form-label">N° de lot</label>
+      {% render_field form.tracability_number class="form-control" %}
+    </div>
+  </div>
+  <hr class="divider mt-3">
+  <button type="submit" class="btn btn-primary">
+    <i class="fa-solid fa-plus"></i> Ajouter
+  </button>
+<script>
+let searchTimer = null;
+
+function searchIngredient(q) {
+  clearTimeout(searchTimer);
+  if (q.length < 2) {
+    document.getElementById('ingredient-results').innerHTML = '';
+    return;
+  }
+  searchTimer = setTimeout(() => {
+    htmx.ajax('GET', `/stock/ingredients/search/?q=${encodeURIComponent(q)}`, {
+      target: document.getElementById('ingredient-results'),
+      swap: 'innerHTML'
+    });
+  }, 300);
+}
+
+function selectIngredientItem(el) {
+  document.getElementById('ingredient-id').value = el.dataset.id;
+  document.getElementById('ingredient-search').value = '';
+  document.getElementById('ingredient-results').innerHTML = '';
+  document.getElementById('ingredient-selected-name').textContent = el.dataset.name;
+  document.getElementById('ingredient-selected').style.display = 'block';
+  const unitSelect = document.querySelector('select[name="unit"]');
+  if (unitSelect && el.dataset.unit) unitSelect.value = el.dataset.unit;
+}
+
+function clearIngredient() {
+  document.getElementById('ingredient-id').value = '';
+  document.getElementById('ingredient-selected').style.display = 'none';
+  document.getElementById('ingredient-selected-name').textContent = '';
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#ingredient-search')) {
+    document.getElementById('ingredient-results').innerHTML = '';
+  }
+});
+</script>
+</form>

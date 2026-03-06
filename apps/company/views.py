@@ -340,3 +340,15 @@ def userrole_delete(request, pk, role_pk):
     return render(request, 'company/partials/userrole_list.html', {
         'company': company, 'user_roles': user_roles,
     })
+
+@login_required
+def switch_company(request, pk):
+    from apps.company.models import Company
+    # Vérifie que le site existe (superuser voit tout, sinon filtre)
+    if request.user.is_superuser:
+        qs = Company.objects.all()
+    else:
+        qs = request.user.get_companies()
+    if qs.filter(pk=pk).exists():
+        request.session['current_company_id'] = pk
+    return redirect(request.META.get('HTTP_REFERER', '/'))

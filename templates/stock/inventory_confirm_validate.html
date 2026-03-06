@@ -1,0 +1,67 @@
+{% extends "base/_base.html" %}
+{% block title %}Valider l'inventaire{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-check"></i> Valider l'inventaire
+  </h1>
+  <a href="{% url 'stock:inventory_detail' inventory.pk %}" class="btn btn-ghost">
+    <i class="fa-solid fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+{% if lines_with_delta %}
+<div class="alert alert-warning mb-4">
+  <i class="fa-solid fa-triangle-exclamation"></i>
+  <div>
+    <strong>{{ lines_with_delta|length }} écart(s) détecté(s)</strong> — les stocks seront corrigés après validation.
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h2 class="card-title">Écarts à corriger</h2>
+  </div>
+  <div class="card-body p-0">
+    <table class="table-atelier w-100">
+      <thead>
+        <tr><th>Article</th><th class="text-center">Théorique</th><th class="text-center">Compté</th><th class="text-center">Correction</th></tr>
+      </thead>
+      <tbody>
+        {% for line in lines_with_delta %}
+        <tr>
+          <td>{% if line.ingredient %}{{ line.ingredient.name }}{% else %}{{ line.recipe.name }}{% endif %}</td>
+          <td class="text-center">{{ line.theoretical_quantity }} {{ line.unit }}</td>
+          <td class="text-center">{{ line.counted_quantity }} {{ line.unit }}</td>
+          <td class="text-center">
+            {% if line.delta > 0 %}
+            <span class="badge badge-success">+{{ line.delta }}</span>
+            {% else %}
+            <span class="badge badge-danger">{{ line.delta }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-success mb-4">
+  <i class="fa-solid fa-check"></i>
+  <div>Aucun écart détecté — le stock est conforme.</div>
+</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="d-flex gap-3">
+    <button type="submit" class="btn btn-primary">
+      <i class="fa-solid fa-check"></i> Confirmer la validation
+    </button>
+    <a href="{% url 'stock:inventory_detail' inventory.pk %}" class="btn btn-ghost">Annuler</a>
+  </div>
+</form>
+{% endblock %}

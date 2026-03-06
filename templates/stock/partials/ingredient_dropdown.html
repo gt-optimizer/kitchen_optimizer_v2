@@ -1,0 +1,21 @@
+{% if results %}
+<div class="autocomplete-dropdown">
+  {% for ing in results %}
+  <div class="autocomplete-item"
+       data-id="{{ ing.pk }}"
+       data-name="{{ ing.name }}"
+       data-unit="{{ ing.use_unit }}"
+       onclick="selectIngredientItem(this)">
+    <div class="d-flex justify-content-between align-items-center">
+      <span>{{ ing.name }}</span>
+      <span class="text-muted" style="font-size:var(--font-size-xs)">
+        {{ ing.get_purchase_unit_display }}
+      </span>
+    </div>
+    {% if ing.category %}
+    <div class="text-muted" style="font-size:var(--font-size-xs)">{{ ing.category }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -39,4 +39,5 @@ urlpatterns = [
          views.userrole_add,    name='userrole_add'),
     path('<int:pk>/roles/<int:role_pk>/delete/',
          views.userrole_delete, name='userrole_delete'),
+    path("switch/<int:pk>/", views.switch_company, name="switch"),
 ]

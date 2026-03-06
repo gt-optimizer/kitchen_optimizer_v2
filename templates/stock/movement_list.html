@@ -1,0 +1,66 @@
+{% extends "base/_base.html" %}
+{% block title %}Mouvements de stock{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-right-left"></i> Mouvements de stock
+  </h1>
+  <a href="{% url 'stock:dashboard' %}" class="btn btn-ghost">
+    <i class="fa-solid fa-arrow-left"></i> Stock
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table-atelier w-100">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Article</th>
+            <th>Type</th>
+            <th class="text-end">Quantité</th>
+            <th class="hide-mobile">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mv in movements %}
+          <tr>
+            <td style="white-space:nowrap;font-size:var(--font-size-xs)">
+              {{ mv.moved_at|date:"d/m/Y H:i" }}
+            </td>
+            <td>
+              {% if mv.ingredient %}{{ mv.ingredient.name }}{% else %}{{ mv.recipe.name }}{% endif %}
+            </td>
+            <td>
+              <span class="badge
+                {% if mv.movement_type == 'reception' or mv.movement_type == 'production_in' or mv.movement_type == 'transfer_in' %}badge-success
+                {% elif mv.movement_type == 'correction' %}badge-warning
+                {% elif mv.movement_type == 'inventory' %}badge-info
+                {% else %}badge-danger{% endif %}">
+                {{ mv.get_movement_type_display }}
+              </span>
+            </td>
+            <td class="text-end fw-bold
+              {% if mv.quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+              {% if mv.quantity > 0 %}+{% endif %}{{ mv.quantity }} {{ mv.unit }}
+            </td>
+            <td class="hide-mobile text-muted" style="font-size:var(--font-size-xs)">
+              {{ mv.notes|truncatechars:60|default:"—" }}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted" style="padding:var(--space-8)">
+              Aucun mouvement enregistré.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

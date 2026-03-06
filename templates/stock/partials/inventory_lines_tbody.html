@@ -1,0 +1,27 @@
+{% for line in lines %}
+<tr id="inventory-line-{{ line.pk }}">
+  <td>
+    <div class="fw-600" style="font-size:var(--font-size-sm)">
+      {% if line.ingredient %}{{ line.ingredient.name }}{% else %}{{ line.recipe.name }}{% endif %}
+    </div>
+    <span class="text-muted" style="font-size:var(--font-size-xs)">{{ line.unit }}</span>
+  </td>
+  <td class="text-center text-muted">{{ line.theoretical_quantity }}</td>
+  <td class="text-center fw-bold">{{ line.counted_quantity }}</td>
+  <td class="text-center">
+    {% if line.delta > 0 %}<span class="badge badge-success">+{{ line.delta }}</span>
+    {% elif line.delta < 0 %}<span class="badge badge-danger">{{ line.delta }}</span>
+    {% else %}<span class="badge badge-muted">0</span>{% endif %}
+  </td>
+  {% if inventory.status == 'draft' %}
+  <td>
+    <button class="btn btn-ghost btn-icon btn-sm"
+            hx-get="{% url 'stock:inventory_line_edit' inventory.pk line.pk %}"
+            hx-target="#inventory-line-{{ line.pk }}"
+            hx-swap="outerHTML">
+      <i class="fa-solid fa-pen"></i>
+    </button>
+  </td>
+  {% endif %}
+</tr>
+{% endfor %}

@@ -10,7 +10,7 @@ urlpatterns = [
     path("company/", include("apps.company.urls", namespace="company")),
     path("catalog/", include("apps.catalog.urls", namespace="catalog")),
     path("purchasing/", include("apps.purchasing.urls", namespace="purchasing")),
-    path("stock/", include("apps.stock.urls")),
+    path("stock/", include("apps.stock.urls", namespace="stock")),
     path("production/", include("apps.production.urls")),
     path("planning/", include("apps.planning.urls")),
     path("sales/", include("apps.sales.urls")),

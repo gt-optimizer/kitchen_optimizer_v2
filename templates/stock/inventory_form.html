@@ -1,0 +1,36 @@
+{% extends "base/_base.html" %}
+{% block title %}Nouvel inventaire{% endblock %}
+{% block nav_stock %}active{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <h1 class="page-title mb-0">
+    <i class="fa-solid fa-plus"></i> Nouvel inventaire
+  </h1>
+  <a href="{% url 'stock:inventory_list' %}" class="btn btn-ghost">
+    <i class="fa-solid fa-arrow-left"></i> Annuler
+  </a>
+</div>
+
+<div class="card" style="max-width:600px">
+  <div class="card-body">
+    <div class="alert alert-info mb-4">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>
+        Un inventaire sera créé avec tous les articles en stock.
+        Vous pourrez ensuite saisir les quantités comptées article par article.
+      </div>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label">Notes (optionnel)</label>
+        {{ form.notes }}
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="fa-solid fa-play"></i> Démarrer l'inventaire
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
